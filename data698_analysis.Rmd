@@ -1,0 +1,2099 @@
+---
+title: "Data698 Project"
+author: "Vivian Kong"
+date: "10/30/2019"
+output:
+  html_document: default
+  word_document: default
+---
+
+```{r,echo=FALSE,warning=FALSE,include=FALSE}
+library(tidyr)
+library(dplyr)
+library(ggplot2)
+library(plyr)
+library(stringr)
+library(plotly)
+library(e1071)
+library(outliers)
+library(PerformanceAnalytics)
+library(rcompanion)
+require(knitr)
+require(lubridate)
+```
+
+```{r, warning=FALSE,echo=FALSE}
+
+temp_global <- read.csv(file="/Users/xiaomengkong/Desktop/data698/FAOSTAT/Global_Temperature.csv")
+
+
+
+
+temp_global1_1850_2018 <- read.csv(file="/Users/xiaomengkong/Desktop/data698/dataset/OurWorldInData/temperature-anomaly.csv")
+
+p <- plot_ly (
+
+x = temp_global1_1850_2018$Year, y = temp_global1_1850_2018$Median,
+type = 'bar',showlegen=FALSE,marker=list(color=~temp_global1_1850_2018$Year,showscale=FALSE)) %>%
+  
+  layout(showlegend=FALSE, title= "Global Average Temperature",xaxis=list(range=c(1850,2018),title="Year",slide="right",showgrid=FALSE),yaxis=list(title ="Temperature"))
+
+p
+
+
+temp_ranking <- temp_global[with(temp_global,order(-Value)),]
+temp_ranking10 <- temp_ranking[1:10, ]
+temp_ranking10_Year <- c(temp_ranking10$Year)
+temp_ranking10_Value <- c(temp_ranking10$Value)
+
+barplot(temp_ranking10_Value,names.arg = temp_ranking10_Year, xlab = "Year", ylab="Temperaure degree Celsius",col="red", main="Top 10 warmest Year")
+
+
+Global_temp_9010 <- temp_global %>% filter (Year<=2010 & Year >=1990)
+x <- Global_temp_9010$Value
+Global_temp_9010<-aggregate(x~ Year,data=Global_temp_9010, sum)
+
+
+```
+
+```{r,warning=FALSE,echo=FALSE}
+temp_Region <- read.csv(file="/Users/xiaomengkong/Desktop/data698/FAOSTAT/Region_Temperature.csv")
+
+Africa_temp <- temp_Region %>% filter (Area=="Africa") %>% filter (Year<=2018 & Year >=2008)
+x <- Africa_temp$Value
+Africa_temp<-aggregate(x~ Year,data=Africa_temp, sum)
+
+
+Asia_temp <- temp_Region %>% filter (Area=="Asia") %>% filter (Year<=2018 & Year >=2008)
+x <- Asia_temp$Value
+Asia_temp<-aggregate(x~ Year,data=Asia_temp, sum)
+
+
+ANZ_temp <- temp_Region %>% filter (Area=="Australia and New Zealand") %>% filter (Year<=2018 & Year >=2008)
+x <- ANZ_temp$Value
+ANZ_temp<-aggregate(x~ Year,data=ANZ_temp, sum)
+
+
+Caribbean_temp <- temp_Region %>% filter (Area=="Caribbean") %>% filter (Year<=2018 & Year >=2008)
+x <- Caribbean_temp$Value
+Caribbean_temp<-aggregate(x~ Year,data=Caribbean_temp, sum)
+
+
+NAmerica_temp <- temp_Region %>% filter (Area=="Northern America") %>% filter (Year<=2018 & Year >=2008)
+x <- NAmerica_temp$Value
+NAmerica_temp<-aggregate(x~ Year,data=NAmerica_temp, sum)
+
+
+SAmerica_temp <- temp_Region %>% filter (Area=="South America") %>% filter (Year<=2018 & Year >=2008)
+x <- SAmerica_temp$Value
+SAmerica_temp<-aggregate(x~ Year,data=SAmerica_temp, sum)
+
+
+Europe_temp <- temp_Region %>% filter (Area=="Europe") %>% filter (Year<=2018 & Year >=2008)
+x <- Europe_temp$Value
+Europe_temp<-aggregate(x~ Year,data=Europe_temp, sum)
+
+data <- data.frame(Africa_temp$Year,Africa_temp$x, Asia_temp$x,ANZ_temp$x, Caribbean_temp$x,  NAmerica_temp$x, SAmerica_temp$x, Europe_temp$x)
+
+
+p <- plot_ly(data, x = ~Africa_temp$Year, y = ~Africa_temp$x, name = 'Africa', type = 'bar', mode = 'lines+markers') %>%
+  add_trace(y = ~Asia_temp$x, name = 'Asia', mode = 'lines+markers') %>%
+  add_trace(y = ~ANZ_temp$x, name = 'ANZ', mode = 'lines+markers') %>%
+  add_trace(y = ~Caribbean_temp$x, name = 'Caribbean', mode = 'lines+markers') %>%
+  add_trace(y = ~NAmerica_temp$x, name = 'NAmerica', mode = 'lines+markers') %>%
+  add_trace(y = ~SAmerica_temp$x, name = 'SAmerica', mode = 'lines+markers') %>%
+  add_trace(y = ~Europe_temp$x, name = 'Europe', mode = 'lines+markers') %>%
+  layout(title = 'Region Average Temperarure',
+         yaxis = list(title = "Temperature degree Celcius"),
+         xaxis = list(title = "Year",zeroline = FALSE)) 
+p
+
+
+```
+
+```{r,warning=FALSE,echo=FALSE}
+# CO2 emission 1990 vs 2000 vs 2010
+Global_Emission <- read.csv(file="/Users/xiaomengkong/Desktop/data698/FAOSTAT/Global_Emission.csv")
+Global_Emission_2010<- Global_Emission %>% filter (Year==2010 & Element== "Emissions (CO2eq)")
+Global_Emission_2000<- Global_Emission %>% filter (Year==2000 & Element== "Emissions (CO2eq)")
+Global_Emission_1990<- Global_Emission %>% filter (Year==1990 & Element== "Emissions (CO2eq)")
+
+p <- plot_ly(
+  x = Global_Emission_1990$Item,
+  y = Global_Emission_1990$Value,
+  name = "Global Emission in 1990",
+  type = "bar"
+) %>%
+  add_trace(y=Global_Emission_2000$Value,name="Global Emission in 2000")%>%
+  add_trace(y=Global_Emission_2010$Value,name="Global Emission in 2010")
+
+p
+```
+
+```{r,warning=FALSE,echo=FALSE}
+Global_Emission_CH4 <- Global_Emission %>% filter  (Element== "Emissions (CO2eq) from CH4") 
+x <- Global_Emission_CH4$Value
+Global_Emission_CH4 <- aggregate(x~ Year,data=Global_Emission_CH4, sum)
+Global_Emission_CH4
+Global_Emission_F_gases <- Global_Emission %>% filter (Element== "Emissions (CO2eq) from F-gases")
+x <- Global_Emission_F_gases$Value
+Global_Emission_F_gases <- aggregate(x~ Year,data=Global_Emission_F_gases, sum)
+Global_Emission_N2O <- Global_Emission %>% filter (Element== "Emissions (CO2eq) from N2O")
+x <- Global_Emission_N2O$Value
+Global_Emission_N2O <- aggregate(x~ Year,data=Global_Emission_N2O, sum)
+Global_Emission_CO2 <- Global_Emission %>% filter (Element== "Emissions (CO2eq) from CO2")
+x <- Global_Emission_CO2$Value
+Global_Emission_CO2 <- aggregate(x~ Year,data=Global_Emission_CO2, sum)
+
+data <- data.frame(Global_Emission_CO2$Year,Global_Emission_CH4$x,Global_Emission_F_gases$x,Global_Emission_N2O$x,Global_Emission_CO2$x)
+
+p <- plot_ly(data, x = ~Global_Emission_CO2$Year, y = ~Global_Emission_CH4$x, name = 'CH4 Emission', type = 'scatter', mode = 'lines+markers') %>%
+  add_trace(y = ~Global_Emission_F_gases$x, name = 'F-gases', mode = 'lines+markers') %>%
+  add_trace(y = ~Global_Emission_N2O$x, name = 'N2O', mode = 'lines+markers') %>%
+  add_trace(y = ~Global_Emission_CO2$x, name = 'CO2', mode = 'lines+markers') %>%
+  layout(title = 'GreenHouse Emission',
+         yaxis = list(title = "Emission (gigga grams)"),
+         xaxis = list(title = "Year",zeroline = FALSE)) 
+p
+
+```
+
+```{r,warning=FALSE, echo=FALSE}
+mlm <- data.frame("Year"=Global_temp_9010$Year, "Temperature"= Global_temp_9010$x, "CO2"=Global_Emission_CO2$x, "N2O"=Global_Emission_N2O$x, "F_gases"=Global_Emission_F_gases$x, "CH4"=Global_Emission_CH4$x)
+matrix_mlm <- as.matrix(mlm)
+chart.Correlation(matrix_mlm[,2:6],method = "pearson",histogram = TRUE, pch= 16)
+
+model_1 <- data.frame("Year"=Global_temp_9010$Year, "Temperature"= Global_temp_9010$x, "CO2"=Global_Emission_CO2$x)
+
+model.1 <- lm(Temperature ~ CO2, data = mlm)
+model.2 <- lm(Temperature ~ N2O, data = mlm)
+model.3 <- lm(Temperature ~ F_gases, data = mlm)
+model.4<- lm(Temperature ~ CH4, data = mlm)
+model.5 <- lm(Temperature ~ CO2+N2O, data = mlm)
+model.6 <- lm(Temperature ~ CO2+F_gases, data = mlm)
+model.7<- lm(Temperature ~ CO2+CH4, data = mlm)
+model.7<- lm(Temperature ~ CO2+N2O+F_gases, data = mlm)
+model.8 <- lm(Temperature ~ CO2+N2O+F_gases+CH4, data = mlm)
+compare <- compareLM(model.1,model.2,model.3,model.4,model.5,model.6,model.7,model.8)
+kable(compare)
+summary(model.1)
+hist(residuals(model.1), col = "darkgray")
+plot(fitted(model.1),residuals(model.1))
+
+
+# Create Training and Test data -
+set.seed(100)  # setting seed to reproduce results of random sampling
+trainingRowIndex <- sample(1:nrow(model_1), 0.6*nrow(model_1))  # row indices for training data
+trainingData <- model_1[trainingRowIndex, ]  # model training data
+testData  <- model_1[-trainingRowIndex, ]   # test data
+lmMod <- lm(Temperature ~ CO2, data=trainingData)  # build the model
+distPred <- predict(lmMod, testData) 
+summary(lmMod)
+actuals_preds <- data.frame(cbind(year= testData$Year,actuals=testData$Temperature, predicteds=distPred))  # make actuals_predicteds dataframe.
+correlation_accuracy <- cor(actuals_preds)  
+kable(actuals_preds) 
+
+```
+
+
+```{r,warning=FALSE,echo=FALSE}
+GDP_growthrate_Global_Region <- read.csv(file="/Users/xiaomengkong/Desktop/data698/FAOSTAT/GDP_Global_Region.csv")
+GDP_growthrate_Global <- GDP_growthrate_Global_Region %>% filter (Area == "World" & Item == "Gross Domestic Product")
+
+p <- plot_ly (
+
+x = GDP_growthrate_Global$Year, y = GDP_growthrate_Global$Value,
+type = 'scatter',showlegen=FALSE,marker=list(color=~GDP_growthrate_Global$Year,showscale=FALSE)) %>%
+  add_lines(name=~"Global",showlegend=FALSE,color='black')%>%
+  layout(showlegend=FALSE, title= "Global GDP growth rate ",xaxis=list(range=c(1990,2020),title="Year",slide="right",showgrid=FALSE),yaxis=list(title ="GDP growth rate"))
+
+p
+
+
+
+Africa_temp <- temp_Region %>% filter (Area=="Africa") %>% filter (Year<=2017 & Year >=1990)
+x <- Africa_temp$Value
+Africa_temp<-aggregate(x~ Year,data=Africa_temp, sum)
+
+
+Asia_temp <- temp_Region %>% filter (Area=="Asia") %>% filter (Year<=2017 & Year >=1990)
+x <- Asia_temp$Value
+Asia_temp<-aggregate(x~ Year,data=Asia_temp, sum)
+
+
+ANZ_temp <- temp_Region %>% filter (Area=="Australia and New Zealand") %>% filter (Year<=2017 & Year >=1990)
+x <- ANZ_temp$Value
+ANZ_temp<-aggregate(x~ Year,data=ANZ_temp, sum)
+
+
+Caribbean_temp <- temp_Region %>% filter (Area=="Caribbean") %>% filter (Year<=2017 & Year >=1990)
+x <- Caribbean_temp$Value
+Caribbean_temp<-aggregate(x~ Year,data=Caribbean_temp, sum)
+
+
+NAmerica_temp <- temp_Region %>% filter (Area=="Northern America") %>% filter (Year<=2017 & Year >=1990)
+x <- NAmerica_temp$Value
+NAmerica_temp<-aggregate(x~ Year,data=NAmerica_temp, sum)
+
+
+SAmerica_temp <- temp_Region %>% filter (Area=="South America") %>% filter (Year<=2017 & Year >=1990)
+x <- SAmerica_temp$Value
+SAmerica_temp<-aggregate(x~ Year,data=SAmerica_temp, sum)
+
+
+Europe_temp <- temp_Region %>% filter (Area=="Europe") %>% filter (Year<=2017 & Year >=1990)
+x <- Europe_temp$Value
+Europe_temp<-aggregate(x~ Year,data=Europe_temp, sum)
+
+data <- data.frame(Africa_temp$Year,Africa_temp$x, Asia_temp$x,ANZ_temp$x, Caribbean_temp$x,  NAmerica_temp$x, SAmerica_temp$x, Europe_temp$x)
+
+
+
+
+
+GDP_growthrate_Africa <- GDP_growthrate_Global_Region %>% filter (Area == "Africa" & Item == "Gross Domestic Product")
+Africa_GDP <- GDP_growthrate_Africa %>%  filter (Year<=2017 & Year >=1990)
+x <- Africa_GDP$Value
+Africa_GDP<-aggregate(x~ Year,data=Africa_GDP, sum)
+
+
+GDP_growthrate_Asia <- GDP_growthrate_Global_Region %>% filter (Area == "Asia" & Item == "Gross Domestic Product")
+Asia_GDP <- GDP_growthrate_Asia %>%  filter (Year<=2017 & Year >=1990)
+x <- Asia_GDP$Value
+Asia_GDP<-aggregate(x~ Year,data=Asia_GDP, sum)
+
+GDP_growthrate_ANZ<- GDP_growthrate_Global_Region %>% filter (Area == "Australia and New Zealand" & Item == "Gross Domestic Product")
+ANZ_GDP <- GDP_growthrate_ANZ  %>% filter (Year<=2017 & Year >=1990)
+x <- ANZ_GDP$Value
+ANZ_GDP<-aggregate(x~ Year,data=ANZ_GDP, sum)
+
+GDP_growthrate_Caribbean <- GDP_growthrate_Global_Region %>% filter (Area == "Caribbean" & Item == "Gross Domestic Product")
+Caribbean_GDP <- GDP_growthrate_Caribbean  %>% filter(Year<=2017 & Year >=1990)
+x <- Caribbean_GDP$Value
+Caribbean_GDP<-aggregate(x~ Year,data=Caribbean_GDP, sum)
+
+GDP_growthrate_NAmerica <- GDP_growthrate_Global_Region %>% filter (Area == "Northern America" & Item == "Gross Domestic Product")
+NAmerica_GDP <- GDP_growthrate_NAmerica %>% filter(Year<=2017 & Year >=1990)
+x <- NAmerica_GDP$Value
+NAmerica_GDP<-aggregate(x~ Year,data=NAmerica_GDP, sum)
+
+GDP_growthrate_SAmerica <- GDP_growthrate_Global_Region %>% filter (Area == "South America" & Item == "Gross Domestic Product")
+SAmerica_GDP <- GDP_growthrate_SAmerica %>% filter (Year<=2017 & Year >=1990)
+x <- SAmerica_GDP$Value
+SAmerica_GDP<-aggregate(x~ Year,data=SAmerica_GDP, sum)
+
+GDP_growthrate_Europe <- GDP_growthrate_Global_Region %>% filter (Area == "Europe" & Item == "Gross Domestic Product")
+Europe_GDP <- GDP_growthrate_Europe  %>% filter (Year<=2017 & Year >=1990)
+x <- Europe_GDP$Value
+Europe_GDP<-aggregate(x~ Year,data=Europe_GDP, sum)
+
+data1 <- data.frame(Africa_GDP$Year,Africa_GDP$x, Asia_GDP$x,ANZ_GDP$x, Caribbean_GDP$x,  NAmerica_GDP$x, SAmerica_GDP$x, Europe_GDP$x)
+
+p <- plot_ly(data1, x = ~Africa_GDP$Year, y = ~Africa_GDP$x, name = 'Africa', type = 'scatter', mode = 'lines+markers') %>%
+  add_trace(y = ~Asia_GDP$x, name = 'Asia', mode = 'lines+markers') %>%
+  add_trace(y = ~ANZ_GDP$x, name = 'ANZ', mode = 'lines+markers') %>%
+  add_trace(y = ~Caribbean_GDP$x, name = 'Caribbean', mode = 'lines+markers') %>%
+  add_trace(y = ~NAmerica_GDP$x, name = 'NAmerica', mode = 'lines+markers') %>%
+  add_trace(y = ~SAmerica_GDP$x, name = 'SAmerica', mode = 'lines+markers') %>%
+  add_trace(y = ~Europe_GDP$x, name = 'Europe', mode = 'lines+markers') %>%
+  layout(title = 'Region GDP Growth rate',
+         yaxis = list(title = "GDP Growth rate %"),
+         xaxis = list(title = "Year",zeroline = FALSE)) 
+p
+
+mlm <- data.frame("Year"=GDP_growthrate_Europe$Year, "Europe_Temperature"= Europe_temp$x, "GDP"=Europe_GDP$x)
+matrix_mlm <- as.matrix(mlm)
+chart.Correlation(matrix_mlm[,2:3],method = "pearson",histogram = TRUE, pch= 16)
+
+
+model.1 <- lm(Europe_Temperature ~ GDP, data = mlm)
+
+
+model.1
+summary(model.1)
+mlm <- data.frame("Year"=GDP_growthrate_Africa$Year, "Africa_Temperature"= Africa_temp$x, "GDP"=Africa_GDP$x)
+matrix_mlm <- as.matrix(mlm)
+chart.Correlation(matrix_mlm[,2:3],method = "pearson",histogram = TRUE, pch= 16)
+
+
+model.2 <- lm(Africa_Temperature ~ GDP, data = mlm)
+
+
+model.2
+summary(model.2)
+mlm <- data.frame("Year"=GDP_growthrate_Asia$Year, "Asia_Temperature"= Asia_temp$x, "GDP"=Asia_GDP$x)
+matrix_mlm <- as.matrix(mlm)
+chart.Correlation(matrix_mlm[,2:3],method = "pearson",histogram = TRUE, pch= 16)
+
+
+model.3 <- lm(Asia_Temperature ~ GDP, data = mlm)
+
+
+model.3
+summary(model.3)
+
+mlm <- data.frame("Year"=GDP_growthrate_ANZ$Year, "ANZ_Temperature"= ANZ_temp$x, "GDP"=ANZ_GDP$x)
+matrix_mlm <- as.matrix(mlm)
+chart.Correlation(matrix_mlm[,2:3],method = "pearson",histogram = TRUE, pch= 16)
+
+
+model.4 <- lm(ANZ_Temperature ~ GDP, data = mlm)
+
+
+model.4
+summary(model.4)
+mlm <- data.frame("Year"=GDP_growthrate_NAmerica$Year, "NAmerica_Temperature"= NAmerica_temp$x, "GDP"=NAmerica_GDP$x)
+matrix_mlm <- as.matrix(mlm)
+chart.Correlation(matrix_mlm[,2:3],method = "pearson",histogram = TRUE, pch= 16)
+
+
+model.5 <- lm(NAmerica_Temperature ~ GDP, data = mlm)
+
+
+model.5
+summary(model.5)
+mlm <- data.frame("Year"=GDP_growthrate_SAmerica$Year, "SAmerica_Temperature"= SAmerica_temp$x, "GDP"=SAmerica_GDP$x)
+matrix_mlm <- as.matrix(mlm)
+chart.Correlation(matrix_mlm[,2:3],method = "pearson",histogram = TRUE, pch= 16)
+
+
+model.6 <- lm(SAmerica_Temperature ~ GDP, data = mlm)
+
+
+model.6
+summary(model.6)
+mlm <- data.frame("Year"=GDP_growthrate_Caribbean$Year, "Caribbean_Temperature"= Caribbean_temp$x, "GDP"=Caribbean_GDP$x)
+matrix_mlm <- as.matrix(mlm)
+chart.Correlation(matrix_mlm[,2:3],method = "pearson",histogram = TRUE, pch= 16)
+
+
+model.7 <- lm(Caribbean_Temperature ~ GDP, data = mlm)
+
+
+model.7
+summary(model.7)
+
+```
+
+
+
+
+
+```{r,warning=FALSE,echo=FALSE}
+
+
+
+
+
+
+
+
+#North America Temperature
+temp_US <- read.csv(file="/Users/xiaomengkong/Desktop/data698/dataset/ncdc_noaa/US_temperature.csv")
+temp_Canada <- read.csv(file="/Users/xiaomengkong/Desktop/data698/dataset/ncdc_noaa/Canada_temperature.csv")
+
+temp_Mexico <- read.csv(file="/Users/xiaomengkong/Desktop/data698/dataset/ncdc_noaa/Mexico_temperature.csv")
+
+temp_US2 <- temp_US %>% filter (Year<=2013 & Year >=1961)
+temp_Canada2 <- temp_Canada %>% filter (Year<=2013 & Year >=1961)
+temp_Mexico2 <- temp_Mexico %>% filter (Year<=2013 & Year >=1961)
+
+
+
+temp_Haiti <- read.csv(file="/Users/xiaomengkong/Desktop/data698/dataset/ncdc_noaa/Haiti_temperature.csv")
+temp_Jamaica <- read.csv(file="/Users/xiaomengkong/Desktop/data698/dataset/ncdc_noaa/Jamaica_temperature.csv")
+temp_Brazil <-read.csv(file="/Users/xiaomengkong/Desktop/data698/dataset/ncdc_noaa/Brazil_temperature.csv")
+temp_Argentina <-read.csv(file="/Users/xiaomengkong/Desktop/data698/dataset/ncdc_noaa/Argentina_temperature.csv")
+
+temp_Haiti2 <- temp_Haiti %>% filter (Year<=2013 & Year >=1961)
+temp_Jamaica2 <- temp_Jamaica %>% filter (Year<=2013 & Year >=1961)
+temp_Brazil2 <- temp_Brazil %>% filter (Year<=2013 & Year >=1961)
+temp_Argentina2 <- temp_Argentina %>% filter (Year<=2013 & Year >=1961)
+
+
+
+temp_China <- read.csv(file="/Users/xiaomengkong/Desktop/data698/dataset/ncdc_noaa/China_temperature.csv")
+temp_Japan <- read.csv(file="/Users/xiaomengkong/Desktop/data698/dataset/ncdc_noaa/Japan_temperature.csv")
+temp_India <-read.csv(file="/Users/xiaomengkong/Desktop/data698/dataset/ncdc_noaa/India_temperature.csv")
+temp_Indonesia <-read.csv(file="/Users/xiaomengkong/Desktop/data698/dataset/ncdc_noaa/Indonesia_temperature.csv")
+
+temp_Iran <-read.csv(file="/Users/xiaomengkong/Desktop/data698/dataset/ncdc_noaa/Iran_temperature.csv")
+temp_Cambodia <-read.csv(file="/Users/xiaomengkong/Desktop/data698/dataset/ncdc_noaa/Cambodia_temperature.csv")
+temp_Thailand <-read.csv(file="/Users/xiaomengkong/Desktop/data698/dataset/ncdc_noaa/Thailand_temperature.csv")
+temp_Qatar <-read.csv(file="/Users/xiaomengkong/Desktop/data698/dataset/ncdc_noaa/Qatar_temperature.csv")
+temp_China2 <- temp_China %>% filter (Year<=2013 & Year >=1961)
+temp_Japan2 <- temp_Japan %>% filter (Year<=2013 & Year >=1961)
+temp_India2 <- temp_India %>% filter (Year<=2013 & Year >=1961)
+temp_Indonesia2 <- temp_Indonesia %>% filter (Year<=2013 & Year >=1961)
+temp_Iran2 <- temp_Iran %>% filter (Year<=2013 & Year >=1961)
+temp_Cambodia2 <- temp_Cambodia %>% filter (Year<=2013 & Year >=1961)
+temp_Thailand2 <- temp_Thailand %>% filter (Year<=2013 & Year >=1961)
+temp_Qatar2 <- temp_Qatar %>% filter (Year<=2013 & Year >=1961)
+
+
+
+temp_Russia <- read.csv(file="/Users/xiaomengkong/Desktop/data698/dataset/ncdc_noaa/Russia_temperature.csv")
+temp_Norway <-read.csv(file="/Users/xiaomengkong/Desktop/data698/dataset/ncdc_noaa/Norway_temperature.csv")
+temp_France <-read.csv(file="/Users/xiaomengkong/Desktop/data698/dataset/ncdc_noaa/France_temperature.csv")
+
+temp_Turkey <-read.csv(file="/Users/xiaomengkong/Desktop/data698/dataset/ncdc_noaa/Turkey_temperature.csv")
+temp_Ireland <-read.csv(file="/Users/xiaomengkong/Desktop/data698/dataset/ncdc_noaa/Ireland_temperature.csv")
+temp_Norway2 <- temp_Norway %>% filter (Year<=2013 & Year >=1961)
+temp_France2 <- temp_France %>% filter (Year<=2013 & Year >=1961)
+temp_Turkey2 <- temp_Turkey %>% filter (Year<=2013 & Year >=1961)
+temp_Ireland2 <- temp_Ireland %>% filter (Year<=2013 & Year >=1961)
+
+
+
+temp_Ethiopia <- read.csv(file="/Users/xiaomengkong/Desktop/data698/dataset/ncdc_noaa/Ethiopia_temperature.csv")
+temp_Egypt <- read.csv(file="/Users/xiaomengkong/Desktop/data698/dataset/ncdc_noaa/Egypt_temperature.csv")
+temp_Congo <- read.csv(file="/Users/xiaomengkong/Desktop/data698/dataset/ncdc_noaa/Congo_temperature.csv")
+temp_Madagascar <- read.csv(file="/Users/xiaomengkong/Desktop/data698/dataset/ncdc_noaa/Madagascar_temperature.csv")
+temp_Mali <- read.csv(file="/Users/xiaomengkong/Desktop/data698/dataset/ncdc_noaa/Mali_temperature.csv")
+
+temp_Egypt2 <- temp_Egypt %>% filter (Year<=2013 & Year >=1961)
+temp_Congo2 <- temp_Congo %>% filter (Year<=2013 & Year >=1961)
+temp_Madagascar2 <- temp_Madagascar %>% filter (Year<=2013 & Year >=1961)
+temp_Mali <- temp_Mali %>% filter (Year<=2015 & Year >=1961)
+
+growth_rate <- function(x)(x/lag(x)-1)*100
+
+
+
+# t-test for temperature 2015
+
+temp_global_avg <- read.csv(file="/Users/xiaomengkong/Desktop/data698/dataset/ncdc_noaa/Global_temperature.csv")
+temp_global_avg_2015 <- temp_global_avg %>% filter(Year==2015)
+Avg15 <- temp_global_avg_2015$Value
+
+temp_US_avg15 <- temp_US %>% filter(Year==2015)
+t_US <- temp_US_avg15$Value
+
+temp_Canada_avg15 <- temp_Canada %>% filter(Year==2015)
+t_Canada <- temp_Canada_avg15$Value
+
+temp_Mexico_avg15 <- temp_Mexico %>% filter(Year==2015)
+t_Mexico <- temp_Mexico_avg15$Value
+
+temp_Indonesia_avg15 <- temp_Indonesia %>% filter(Year==2015)
+t_Indonesia <- temp_Indonesia_avg15$Value
+
+temp_Argentina_avg15 <- temp_Argentina %>% filter(Year==2015)
+t_Argentina <- temp_Argentina_avg15$Value
+
+temp_Thailand_avg15 <- temp_Thailand %>% filter(Year==2015)
+t_Thailand <- temp_Thailand_avg15$Value
+
+temp_Brazil_avg15 <- temp_Brazil %>% filter(Year==2015)
+t_Brazil <- temp_Brazil_avg15$Value
+
+temp_Turkey_avg15 <- temp_Turkey %>% filter(Year==2015)
+t_Turkey <- temp_Turkey_avg15$Value
+
+temp_Japan_avg15 <- temp_Japan %>% filter(Year==2015)
+t_Japan <- temp_Japan_avg15$Value
+
+temp_Qatar_avg15 <- temp_Qatar %>% filter(Year==2015)
+t_Qatar <- temp_Qatar_avg15$Value
+
+temp_Cambodia_avg15 <- temp_Cambodia %>% filter(Year==2015)
+t_Cambodia <- temp_Cambodia_avg15$Value
+
+temp_Norway_avg15 <- temp_Norway %>% filter(Year==2015)
+t_Norway <- temp_Norway_avg15$Value
+
+temp_France_avg15 <- temp_France %>% filter(Year==2015)
+t_France <- temp_France_avg15$Value
+
+temp_Russia_avg15 <- temp_Russia %>% filter(Year==2015)
+t_Russia <- temp_Russia_avg15$Value
+
+temp_Iran_avg15 <- temp_Iran %>% filter(Year==2015)
+t_Iran <- temp_Iran_avg15$Value
+
+temp_China_avg15 <- temp_China %>% filter(Year==2015)
+t_China <- temp_China_avg15$Value
+
+temp_Jamaica_avg15 <- temp_Jamaica %>% filter(Year==2015)
+t_Jamaica <- temp_Jamaica_avg15$Value
+
+temp_Ireland_avg15 <- temp_Ireland %>% filter(Year==2015)
+t_Ireland <- temp_Ireland_avg15$Value
+
+temp_Congo_avg15 <- temp_Congo %>% filter(Year==2015)
+t_Congo <- temp_Congo_avg15$Value
+
+temp_Madagascar_avg15 <- temp_Madagascar %>% filter(Year==2015)
+t_Madagascar <- temp_Madagascar_avg15$Value
+
+temp_India_avg15 <- temp_India %>% filter(Year==2015)
+t_India <- temp_India_avg15$Value
+
+temp_Mali_avg15 <- temp_Mali %>% filter(Year==2015)
+t_Mali <- temp_Mali_avg15$Value
+
+temp_Haiti_avg15 <- temp_Haiti %>% filter(Year==2015)
+t_Haiti <- temp_Haiti_avg15$Value
+
+temp_Ethiopia_avg15 <- temp_Ethiopia %>% filter(Year==2015)
+t_Ethiopia <- temp_Ethiopia_avg15$Value
+
+temp_Egypt_avg15 <- temp_Egypt %>% filter(Year==2015)
+t_Egypt <- temp_Egypt_avg15$Value
+
+temp_sample15 <- c(t_US,t_Canada,t_Mexico,t_Indonesia,t_Argentina,t_Thailand,t_Brazil,t_Turkey,t_Japan,t_Qatar,t_Cambodia,t_Norway,t_France,t_Russia,t_Iran,t_China,t_Jamaica,t_Ireland,t_Congo,t_Madagascar,t_India,t_Mali,t_Haiti,t_Ethiopia,t_Egypt )
+s <- mean(temp_sample15)
+temp_sample15_greater <- which(temp_sample15>s)
+temp_sample15_greater
+t.test(temp_sample15_greater,mu=Avg15,alternative = "greater")
+
+# 2014
+
+temp_global_avg_2014 <- temp_global_avg %>% filter(Year==2014)
+temp_global_avg_2014
+Avg14 <- temp_global_avg_2014$Value
+
+temp_US_avg14 <- temp_US %>% filter(Year==2014)
+t_US <- temp_US_avg14$Value
+
+temp_Canada_avg14 <- temp_Canada %>% filter(Year==2014)
+t_Canada <- temp_Canada_avg14$Value
+
+temp_Mexico_avg14 <- temp_Mexico %>% filter(Year==2014)
+t_Mexico <- temp_Mexico_avg14$Value
+
+temp_Indonesia_avg14 <- temp_Indonesia %>% filter(Year==2014)
+t_Indonesia <- temp_Indonesia_avg14$Value
+
+temp_Argentina_avg14 <- temp_Argentina %>% filter(Year==2014)
+t_Argentina <- temp_Argentina_avg14$Value
+
+temp_Thailand_avg14 <- temp_Thailand %>% filter(Year==2014)
+t_Thailand <- temp_Thailand_avg14$Value
+
+temp_Brazil_avg14 <- temp_Brazil %>% filter(Year==2014)
+t_Brazil <- temp_Brazil_avg14$Value
+
+temp_Turkey_avg14 <- temp_Turkey %>% filter(Year==2014)
+t_Turkey <- temp_Turkey_avg14$Value
+
+temp_Japan_avg14 <- temp_Japan %>% filter(Year==2014)
+t_Japan <- temp_Japan_avg14$Value
+
+temp_Qatar_avg14 <- temp_Qatar %>% filter(Year==2014)
+t_Qatar <- temp_Qatar_avg14$Value
+
+temp_Cambodia_avg14 <- temp_Cambodia %>% filter(Year==2014)
+t_Cambodia <- temp_Cambodia_avg14$Value
+
+temp_Norway_avg14 <- temp_Norway %>% filter(Year==2014)
+t_Norway <- temp_Norway_avg14$Value
+
+temp_France_avg14 <- temp_France %>% filter(Year==2014)
+t_France <- temp_France_avg14$Value
+
+temp_Russia_avg14 <- temp_Russia %>% filter(Year==2014)
+t_Russia <- temp_Russia_avg14$Value
+
+temp_Iran_avg14 <- temp_Iran %>% filter(Year==2014)
+t_Iran <- temp_Iran_avg14$Value
+
+temp_China_avg14 <- temp_China %>% filter(Year==2014)
+t_China <- temp_China_avg14$Value
+
+temp_Jamaica_avg14 <- temp_Jamaica %>% filter(Year==2014)
+t_Jamaica <- temp_Jamaica_avg14$Value
+
+temp_Ireland_avg14 <- temp_Ireland %>% filter(Year==2014)
+t_Ireland <- temp_Ireland_avg14$Value
+
+temp_Congo_avg14 <- temp_Congo %>% filter(Year==2014)
+t_Congo <- temp_Congo_avg14$Value
+
+temp_Madagascar_avg14 <- temp_Madagascar %>% filter(Year==2014)
+t_Madagascar <- temp_Madagascar_avg14$Value
+
+temp_India_avg14 <- temp_India %>% filter(Year==2014)
+t_India <- temp_India_avg14$Value
+
+temp_Mali_avg14 <- temp_Mali %>% filter(Year==2014)
+t_Mali <- temp_Mali_avg14$Value
+
+temp_Haiti_avg14 <- temp_Haiti %>% filter(Year==2014)
+t_Haiti <- temp_Haiti_avg14$Value
+
+temp_Ethiopia_avg14 <- temp_Ethiopia %>% filter(Year==2014)
+t_Ethiopia <- temp_Ethiopia_avg14$Value
+
+temp_Egypt_avg14 <- temp_Egypt %>% filter(Year==2014)
+t_Egypt <- temp_Egypt_avg14$Value
+
+temp_sample14 <- c(t_US,t_Canada,t_Mexico,t_Indonesia,t_Argentina,t_Thailand,t_Brazil,t_Turkey,t_Japan,t_Qatar,t_Cambodia,t_Norway,t_France,t_Russia,t_Iran,t_China,t_Jamaica,t_Ireland,t_Congo,t_Madagascar,t_India,t_Mali,t_Haiti,t_Ethiopia,t_Egypt )
+s <- mean(temp_sample14)
+temp_sample14_greater <- which(temp_sample14>s)
+temp_sample14_greater
+t.test(temp_sample14_greater,mu=Avg14,alternative = "greater")
+
+
+#2013
+temp_global_avg_2013 <- temp_global_avg %>% filter(Year==2013)
+temp_global_avg_2013
+Avg13 <- temp_global_avg_2013$Value
+
+temp_US_avg13 <- temp_US %>% filter(Year==2013)
+t_US <- temp_US_avg13$Value
+
+temp_Canada_avg13 <- temp_Canada %>% filter(Year==2013)
+t_Canada <- temp_Canada_avg13$Value
+
+temp_Mexico_avg13 <- temp_Mexico %>% filter(Year==2013)
+t_Mexico <- temp_Mexico_avg13$Value
+
+temp_Indonesia_avg13 <- temp_Indonesia %>% filter(Year==2013)
+t_Indonesia <- temp_Indonesia_avg13$Value
+
+temp_Argentina_avg13 <- temp_Argentina %>% filter(Year==2013)
+t_Argentina <- temp_Argentina_avg13$Value
+
+temp_Thailand_avg13 <- temp_Thailand %>% filter(Year==2013)
+t_Thailand <- temp_Thailand_avg13$Value
+
+temp_Brazil_avg13 <- temp_Brazil %>% filter(Year==2013)
+t_Brazil <- temp_Brazil_avg13$Value
+
+temp_Turkey_avg13 <- temp_Turkey %>% filter(Year==2013)
+t_Turkey <- temp_Turkey_avg13$Value
+
+temp_Japan_avg13 <- temp_Japan %>% filter(Year==2013)
+t_Japan <- temp_Japan_avg13$Value
+
+temp_Qatar_avg13 <- temp_Qatar %>% filter(Year==2013)
+t_Qatar <- temp_Qatar_avg13$Value
+
+temp_Cambodia_avg13 <- temp_Cambodia %>% filter(Year==2013)
+t_Cambodia <- temp_Cambodia_avg13$Value
+
+temp_Norway_avg13 <- temp_Norway %>% filter(Year==2013)
+t_Norway <- temp_Norway_avg13$Value
+
+temp_France_avg13 <- temp_France %>% filter(Year==2013)
+t_France <- temp_France_avg13$Value
+
+temp_Russia_avg13 <- temp_Russia %>% filter(Year==2013)
+t_Russia <- temp_Russia_avg13$Value
+
+temp_Iran_avg13 <- temp_Iran %>% filter(Year==2013)
+t_Iran <- temp_Iran_avg13$Value
+
+temp_China_avg13 <- temp_China %>% filter(Year==2013)
+t_China <- temp_China_avg13$Value
+
+temp_Jamaica_avg13 <- temp_Jamaica %>% filter(Year==2013)
+t_Jamaica <- temp_Jamaica_avg13$Value
+
+temp_Ireland_avg13 <- temp_Ireland %>% filter(Year==2013)
+t_Ireland <- temp_Ireland_avg13$Value
+
+temp_Congo_avg13 <- temp_Congo %>% filter(Year==2013)
+t_Congo <- temp_Congo_avg13$Value
+
+temp_Madagascar_avg13 <- temp_Madagascar %>% filter(Year==2013)
+t_Madagascar <- temp_Madagascar_avg13$Value
+
+temp_India_avg13 <- temp_India %>% filter(Year==2013)
+t_India <- temp_India_avg13$Value
+
+temp_Mali_avg13 <- temp_Mali %>% filter(Year==2013)
+t_Mali <- temp_Mali_avg13$Value
+
+temp_Haiti_avg13 <- temp_Haiti %>% filter(Year==2013)
+t_Haiti <- temp_Haiti_avg13$Value
+
+temp_Ethiopia_avg13 <- temp_Ethiopia %>% filter(Year==2013)
+t_Ethiopia <- temp_Ethiopia_avg13$Value
+
+temp_Egypt_avg13 <- temp_Egypt %>% filter(Year==2013)
+t_Egypt <- temp_Egypt_avg13$Value
+
+temp_sample13 <- c(t_US,t_Canada,t_Mexico,t_Indonesia,t_Argentina,t_Thailand,t_Brazil,t_Turkey,t_Japan,t_Qatar,t_Cambodia,t_Norway,t_France,t_Russia,t_Iran,t_China,t_Jamaica,t_Ireland,t_Congo,t_Madagascar,t_India,t_Mali,t_Haiti,t_Ethiopia,t_Egypt )
+s <- mean(temp_sample13)
+temp_sample13_greater <- which(temp_sample13>s)
+temp_sample13_greater
+t.test(temp_sample13_greater,mu=Avg13,alternative = "greater")
+
+
+# 2012
+
+temp_global_avg_2012 <- temp_global_avg %>% filter(Year==2012)
+temp_global_avg_2012
+Avg12 <- temp_global_avg_2012$Value
+
+temp_US_avg12 <- temp_US %>% filter(Year==2012)
+t_US <- temp_US_avg12$Value
+
+temp_Canada_avg12 <- temp_Canada %>% filter(Year==2012)
+t_Canada <- temp_Canada_avg12$Value
+
+temp_Mexico_avg12 <- temp_Mexico %>% filter(Year==2012)
+t_Mexico <- temp_Mexico_avg12$Value
+
+temp_Indonesia_avg12 <- temp_Indonesia %>% filter(Year==2012)
+t_Indonesia <- temp_Indonesia_avg12$Value
+
+temp_Argentina_avg12 <- temp_Argentina %>% filter(Year==2012)
+t_Argentina <- temp_Argentina_avg12$Value
+
+temp_Thailand_avg12 <- temp_Thailand %>% filter(Year==2012)
+t_Thailand <- temp_Thailand_avg12$Value
+
+temp_Brazil_avg12 <- temp_Brazil %>% filter(Year==2012)
+t_Brazil <- temp_Brazil_avg12$Value
+
+temp_Turkey_avg12 <- temp_Turkey %>% filter(Year==2012)
+t_Turkey <- temp_Turkey_avg12$Value
+
+temp_Japan_avg12 <- temp_Japan %>% filter(Year==2012)
+t_Japan <- temp_Japan_avg12$Value
+
+temp_Qatar_avg12 <- temp_Qatar %>% filter(Year==2012)
+t_Qatar <- temp_Qatar_avg12$Value
+
+temp_Cambodia_avg12 <- temp_Cambodia %>% filter(Year==2012)
+t_Cambodia <- temp_Cambodia_avg12$Value
+
+temp_Norway_avg12 <- temp_Norway %>% filter(Year==2012)
+t_Norway <- temp_Norway_avg12$Value
+
+temp_France_avg12 <- temp_France %>% filter(Year==2012)
+t_France <- temp_France_avg12$Value
+
+temp_Russia_avg12 <- temp_Russia %>% filter(Year==2012)
+t_Russia <- temp_Russia_avg12$Value
+
+temp_Iran_avg12 <- temp_Iran %>% filter(Year==2012)
+t_Iran <- temp_Iran_avg12$Value
+
+temp_China_avg12 <- temp_China %>% filter(Year==2012)
+t_China <- temp_China_avg12$Value
+
+temp_Jamaica_avg12 <- temp_Jamaica %>% filter(Year==2012)
+t_Jamaica <- temp_Jamaica_avg12$Value
+
+temp_Ireland_avg12 <- temp_Ireland %>% filter(Year==2012)
+t_Ireland <- temp_Ireland_avg12$Value
+
+temp_Congo_avg12 <- temp_Congo %>% filter(Year==2012)
+t_Congo <- temp_Congo_avg12$Value
+
+temp_Madagascar_avg12 <- temp_Madagascar %>% filter(Year==2012)
+t_Madagascar <- temp_Madagascar_avg12$Value
+
+temp_India_avg12 <- temp_India %>% filter(Year==2012)
+t_India <- temp_India_avg12$Value
+
+temp_Mali_avg12 <- temp_Mali %>% filter(Year==2012)
+t_Mali <- temp_Mali_avg12$Value
+
+temp_Haiti_avg12 <- temp_Haiti %>% filter(Year==2012)
+t_Haiti <- temp_Haiti_avg12$Value
+
+temp_Ethiopia_avg12 <- temp_Ethiopia %>% filter(Year==2012)
+t_Ethiopia <- temp_Ethiopia_avg12$Value
+
+temp_Egypt_avg12 <- temp_Egypt %>% filter(Year==2012)
+t_Egypt <- temp_Egypt_avg12$Value
+
+temp_sample12 <- c(t_US,t_Canada,t_Mexico,t_Indonesia,t_Argentina,t_Thailand,t_Brazil,t_Turkey,t_Japan,t_Qatar,t_Cambodia,t_Norway,t_France,t_Russia,t_Iran,t_China,t_Jamaica,t_Ireland,t_Congo,t_Madagascar,t_India,t_Mali,t_Haiti,t_Ethiopia,t_Egypt )
+s <- mean(temp_sample12)
+temp_sample12_greater <- which(temp_sample12>s)
+temp_sample12_greater
+t.test(temp_sample12_greater,mu=Avg12,alternative = "greater")
+
+
+
+
+
+
+
+
+
+```
+```{r,echo=FALSE, warning=FALSE}
+global_gpv <- read.csv(file="/Users/xiaomengkong/Desktop/data698/FAOSTAT/GPV_Global_Region.csv")
+global1_gpv <- global_gpv %>% filter (Area == "World" & Element == "Gross Production Value (current million US$)")
+
+x <- global1_gpv$Value
+global1_gpv <- aggregate(x~ Year,data=global1_gpv, sum)
+
+global_Annual_gpv <- data.frame("Year"=1991:2016,"Value"=global1_gpv$x)
+global_Annual_gpv$rate <- round(growth_rate(global_Annual_gpv $Value),2)
+
+global_Annual_gpv <- global_Annual_gpv %>% filter (Year >= 1992)
+
+
+
+
+p <- plot_ly (
+
+x = global_Annual_gpv$Year, y = global_Annual_gpv$rate,
+type = 'scatter',showlegen=FALSE,marker=list(color=~global_Annual_gpv$Year,showscale=FALSE)) %>%
+  add_lines(name=~"Global",showlegend=FALSE,color='black')%>%
+  layout(showlegend=FALSE, title= "Global Gross Production Value between 1991 and 2016 ",xaxis=list(range=c(1991,2016),title="Year",slide="right",showgrid=FALSE),yaxis=list(title ="GPV"))
+
+p
+
+
+GPV_Africa <- global_gpv  %>% filter (Area == "Africa" & Element == "Gross Production Value (current million US$)")
+x <- GPV_Africa$Value
+GPV_Africa <- aggregate(x~ Year,data=GPV_Africa, sum)
+
+GPV_Africa <- data.frame("Year"=1991:2016,"Value"=GPV_Africa$x)
+GPV_Africa$rate <- round(growth_rate(GPV_Africa $Value),2)
+
+GPV_Africa <- GPV_Africa%>% filter (Year >= 1992)
+
+
+GPV_Asia <- global_gpv  %>% filter (Area == "Asia" & Element == "Gross Production Value (current million US$)")
+x <- GPV_Asia$Value
+GPV_Asia <- aggregate(x~ Year,data=GPV_Asia, sum)
+
+GPV_Asia <- data.frame("Year"=1991:2016,"Value"=GPV_Asia$x)
+GPV_Asia$rate <- round(growth_rate(GPV_Asia $Value),2)
+
+GPV_Asia <- GPV_Asia%>% filter (Year >= 1992)
+
+
+GPV_ANZ <- global_gpv  %>% filter (Area == "Australia and New Zealand" & Element == "Gross Production Value (current million US$)")
+x <- GPV_ANZ$Value
+GPV_ANZ <- aggregate(x~ Year,data=GPV_ANZ, sum)
+
+GPV_ANZ <- data.frame("Year"=1991:2016,"Value"=GPV_ANZ$x)
+GPV_ANZ$rate <- round(growth_rate(GPV_ANZ $Value),2)
+
+GPV_ANZ <- GPV_ANZ%>% filter (Year >= 1992)
+
+
+GPV_Caribbean <- global_gpv  %>% filter (Area == "Caribbean" & Element == "Gross Production Value (current million US$)")
+x <- GPV_Caribbean$Value
+GPV_Caribbean <- aggregate(x~ Year,data=GPV_Caribbean, sum)
+
+GPV_Caribbean <- data.frame("Year"=1991:2016,"Value"=GPV_Caribbean$x)
+GPV_Caribbean$rate <- round(growth_rate(GPV_Caribbean $Value),2)
+
+GPV_Caribbean <- GPV_Caribbean%>% filter (Year >= 1992)
+
+
+
+
+GPV_NAmerica <- global_gpv  %>% filter (Area == "Northern America" & Element == "Gross Production Value (current million US$)")
+x <- GPV_NAmerica$Value
+GPV_NAmerica <- aggregate(x~ Year,data=GPV_NAmerica, sum)
+
+GPV_NAmerica <- data.frame("Year"=1991:2016,"Value"=GPV_NAmerica$x)
+GPV_NAmerica$rate <- round(growth_rate(GPV_NAmerica $Value),2)
+
+GPV_NAmerica <- GPV_NAmerica%>% filter (Year >= 1992)
+
+
+GPV_SAmerica <- global_gpv  %>% filter (Area == "South America" & Element == "Gross Production Value (current million US$)")
+x <- GPV_SAmerica$Value
+GPV_SAmerica <- aggregate(x~ Year,data=GPV_SAmerica, sum)
+
+GPV_SAmerica <- data.frame("Year"=1991:2016,"Value"=GPV_SAmerica$x)
+GPV_SAmerica$rate <- round(growth_rate(GPV_SAmerica $Value),2)
+
+GPV_SAmerica <- GPV_SAmerica%>% filter (Year >= 1992)
+
+
+GPV_Europe <- global_gpv  %>% filter (Area == "Europe" & Element == "Gross Production Value (current million US$)")
+x <- GPV_Europe$Value
+GPV_Europe <- aggregate(x~ Year,data=GPV_Europe, sum)
+
+GPV_Europe <- data.frame("Year"=1991:2016,"Value"=GPV_Europe$x)
+GPV_Europe$rate <- round(growth_rate(GPV_Europe $Value),2)
+
+GPV_Europe <- GPV_Europe%>% filter (Year >= 1992)
+
+
+Africa_temp <- temp_Region %>% filter (Area=="Africa") %>% filter (Year<=2016 & Year >=1992)
+x <- Africa_temp$Value
+Africa_temp<-aggregate(x~ Year,data=Africa_temp, sum)
+
+
+Asia_temp <- temp_Region %>% filter (Area=="Asia") %>% filter (Year<=2016 & Year >=1992)
+x <- Asia_temp$Value
+Asia_temp<-aggregate(x~ Year,data=Asia_temp, sum)
+
+
+ANZ_temp <- temp_Region %>% filter (Area=="Australia and New Zealand") %>% filter (Year<=2016 & Year >=1992)
+x <- ANZ_temp$Value
+ANZ_temp<-aggregate(x~ Year,data=ANZ_temp, sum)
+
+
+Caribbean_temp <- temp_Region %>% filter (Area=="Caribbean") %>% filter (Year<=2016 & Year >=1992)
+x <- Caribbean_temp$Value
+Caribbean_temp<-aggregate(x~ Year,data=Caribbean_temp, sum)
+
+
+NAmerica_temp <- temp_Region %>% filter (Area=="Northern America") %>% filter (Year<=2016 & Year >=1992)
+x <- NAmerica_temp$Value
+NAmerica_temp<-aggregate(x~ Year,data=NAmerica_temp, sum)
+
+
+SAmerica_temp <- temp_Region %>% filter (Area=="South America") %>% filter (Year<=2016 & Year >=1992)
+x <- SAmerica_temp$Value
+SAmerica_temp<-aggregate(x~ Year,data=SAmerica_temp, sum)
+
+
+Europe_temp <- temp_Region %>% filter (Area=="Europe") %>% filter (Year<=2016 & Year >=1992)
+x <- Europe_temp$Value
+Europe_temp<-aggregate(x~ Year,data=Europe_temp, sum)
+
+data2 <- data.frame(GPV_Europe$Year,GPV_Africa$Value, GPV_Asia$Value,GPV_ANZ$Value, GPV_Caribbean$Value,  GPV_NAmerica$Value, GPV_SAmerica$Value, GPV_SAmerica$Value)
+p <- plot_ly(data, x = ~GPV_Africa$Year, y = ~GPV_Africa$Value, name = 'Africa', type = 'scatter', mode = 'lines+markers') %>%
+  add_trace(y = ~GPV_Asia$Value, name = 'Asia', mode = 'lines+markers') %>%
+  add_trace(y = ~GPV_ANZ$Value, name = 'ANZ', mode = 'lines+markers') %>%
+  add_trace(y = ~GPV_Caribbean$Value, name = 'Caribbean', mode = 'lines+markers') %>%
+  add_trace(y = ~GPV_NAmerica$Value, name = 'NAmerica', mode = 'lines+markers') %>%
+  add_trace(y = ~GPV_SAmerica$Value, name = 'SAmerica', mode = 'lines+markers') %>%
+  add_trace(y = ~GPV_SAmerica$Value, name = 'Europe', mode = 'lines+markers') %>%
+  layout(title = 'Region GPV',
+         yaxis = list(title = "Gross Production Value"),
+         xaxis = list(title = "Year",zeroline = FALSE)) 
+p
+
+
+
+
+mlm <- data.frame("Year"=GPV_Europe$Year, "Europe_Temperature"= Europe_temp$x, "rate"=GPV_Europe$rate)
+matrix_mlm <- as.matrix(mlm)
+chart.Correlation(matrix_mlm[,2:3],method = "pearson",histogram = TRUE, pch= 16)
+
+
+model.1 <- lm(Europe_Temperature ~ rate, data = mlm)
+
+
+model.1
+summary(model.1)
+
+
+mlm <- data.frame("Year"=GPV_Africa$Year, "Africa_Temperature"= Africa_temp$x, "rate"=GPV_Africa$rate)
+matrix_mlm <- as.matrix(mlm)
+chart.Correlation(matrix_mlm[,2:3],method = "pearson",histogram = TRUE, pch= 16)
+
+
+model.2 <- lm(Africa_Temperature ~ rate, data = mlm)
+
+
+model.2
+summary(model.2)
+
+
+mlm <- data.frame("Year"=GPV_Asia$Year, "Asia_Temperature"= Asia_temp$x, "rate"=GPV_Asia$rate)
+matrix_mlm <- as.matrix(mlm)
+chart.Correlation(matrix_mlm[,2:3],method = "pearson",histogram = TRUE, pch= 16)
+
+
+model.3 <- lm(Asia_Temperature ~ rate, data = mlm)
+
+
+model.3
+summary(model.3)
+
+mlm <- data.frame("Year"=GPV_NAmerica$Year, "NAmerica_Temperature"= NAmerica_temp$x, "rate"=GPV_NAmerica$rate)
+matrix_mlm <- as.matrix(mlm)
+chart.Correlation(matrix_mlm[,2:3],method = "pearson",histogram = TRUE, pch= 16)
+
+
+model.4 <- lm(NAmerica_Temperature ~ rate, data = mlm)
+
+
+model.4
+summary(model.4)
+
+
+mlm <- data.frame("Year"=GPV_SAmerica$Year, "SAmericaTemperature"= SAmerica_temp$x, "rate"=GPV_SAmerica$rate)
+matrix_mlm <- as.matrix(mlm)
+chart.Correlation(matrix_mlm[,2:3],method = "pearson",histogram = TRUE, pch= 16)
+
+
+model.5 <- lm(SAmericaTemperature ~ rate, data = mlm)
+
+
+model.5
+summary(model.5)
+
+mlm <- data.frame("Year"=GPV_Caribbean$Year, "Caribbean_Temperature"= Caribbean_temp$x, "rate"=GPV_Caribbean$rate)
+matrix_mlm <- as.matrix(mlm)
+chart.Correlation(matrix_mlm[,2:3],method = "pearson",histogram = TRUE, pch= 16)
+
+
+model.6 <- lm(Caribbean_Temperature ~ rate, data = mlm)
+
+
+model.6
+summary(model.6)
+
+mlm <- data.frame("Year"=GPV_ANZ$Year, "ANZ_Temperature"= ANZ_temp$x, "rate"=GPV_ANZ$rate)
+matrix_mlm <- as.matrix(mlm)
+chart.Correlation(matrix_mlm[,2:3],method = "pearson",histogram = TRUE, pch= 16)
+
+
+model.7 <- lm(ANZ_Temperature ~ rate, data = mlm)
+
+
+model.7
+summary(model.7)
+
+
+
+```
+
+
+```{r,echo=FALSE, warning=FALSE}
+# North America Gross Production Value
+NorthAmerica_gross_production_value<-read.csv(file="/Users/xiaomengkong/Desktop/data698/FAOSTAT/NorthAmerica_grossProductionValue.csv")
+US_gross_production_value <- NorthAmerica_gross_production_value %>% filter (Area=="United States of America")
+Canada_gross_production_value <-NorthAmerica_gross_production_value %>% filter (Area=="Canada")
+Mexico_gross_production_value <- NorthAmerica_gross_production_value %>% filter (Area=="Mexico")
+
+
+# US
+US_gpv <- US_gross_production_value 
+x <- US_gpv$Value
+US_gpv <- aggregate(x~ Year,data=US_gpv, sum)
+
+US_Annual_gpv <- data.frame("Year"=1991:2015,"Value"=US_gpv$x)
+US_Annual_gpv$growth_rate <- round(growth_rate(US_Annual_gpv$Value),2)
+temp_US_food <-read.csv(file="/Users/xiaomengkong/Desktop/data698/dataset/ncdc_noaa/US_temperature.csv")
+
+temp_US_food<- temp_US_food%>% filter (Year<=2015 & Year >=1992)
+US_Annual_gpv<- US_Annual_gpv%>% filter (Year<=2015 & Year >=1992)
+correlation_US <- data.frame(US_Annual_gpv$growth_rate,temp_US_food$Value)
+
+p_correlation_US <- plot_ly(data=correlation_US,x=~temp_US_food.Value,y=~US_Annual_gpv.growth_rate)%>%
+  layout(title = 'US Gross Production Values and Temperature between 1992 and 2015',
+         yaxis = list(title = "Gross Production Values Million$",zeroline = FALSE),
+         xaxis = list(title = "US Temperature",zeroline = FALSE))
+p_correlation_US
+
+cor <- cor.test(correlation_US$temp_US_food.Value,correlation_US$US_Annual_gpv.growth_rate)
+p_US<-cor$p.value
+cor_US<-cor$estimate
+
+
+
+
+
+# Canada
+
+Canada_gpv <- Canada_gross_production_value 
+x <- Canada_gpv$Value
+Canada_gpv <- aggregate(x~ Year,data=Canada_gpv, sum)
+ 
+Canada_Annual_gpv <- data.frame("Year"=1991:2015,"Value"=Canada_gpv$x)
+Canada_Annual_gpv$growth_rate <- round(growth_rate(Canada_Annual_gpv$Value),2)
+temp_Canada_food <-read.csv(file="/Users/xiaomengkong/Desktop/data698/dataset/ncdc_noaa/Canada_temperature.csv")
+
+temp_Canada_food<- temp_Canada_food%>% filter (Year<=2015 & Year >=1992)
+Canada_Annual_gpv<- Canada_Annual_gpv%>% filter (Year<=2015 & Year >=1992)
+correlation_Canada <- data.frame(Canada_Annual_gpv$growth_rate,temp_Canada_food$Value)
+
+p_correlation_Canada <- plot_ly(data=correlation_Canada,x=~temp_Canada_food.Value,y=~Canada_Annual_gpv.growth_rate)%>%
+  layout(title = 'Canada Gross Production Values and Temperature between 1992 and 2015',
+         yaxis = list(title = "Gross Production Values Million$",zeroline = FALSE),
+         xaxis = list(title = "Canada Temperature",zeroline = FALSE))
+p_correlation_Canada
+
+cor <- cor.test(correlation_Canada$temp_Canada_food.Value,correlation_Canada$Canada_Annual_gpv.growth_rate)
+p_Canada<-cor$p.value
+cor_Canada<-cor$estimate
+
+
+
+# Mexico
+Mexico_gpv <- Mexico_gross_production_value 
+x <- Mexico_gpv$Value
+Mexico_gpv <- aggregate(x~ Year,data=Mexico_gpv, sum)
+
+Mexico_Annual_gpv <- data.frame("Year"=1991:2015,"Value"=Mexico_gpv$x)
+Mexico_Annual_gpv$growth_rate <- round(growth_rate(Mexico_Annual_gpv$Value),2)
+temp_Mexico_food <-read.csv(file="/Users/xiaomengkong/Desktop/data698/dataset/ncdc_noaa/Mexico_temperature.csv")
+
+temp_Mexico_food<- temp_Mexico_food%>% filter (Year<=2015 & Year >=1992)
+Mexico_Annual_gpv<- Mexico_Annual_gpv%>% filter (Year<=2015 & Year >=1992)
+correlation_Mexico <- data.frame(Mexico_Annual_gpv$growth_rate,temp_Mexico_food$Value)
+
+p_correlation_Mexico <- plot_ly(data=correlation_Mexico,x=~temp_Mexico_food.Value,y=~Mexico_Annual_gpv.growth_rate)%>%
+  layout(title = 'Mexico Gross Production Values and Temperature between 1992 and 2015',
+         yaxis = list(title = "Gross Production Values Million$",zeroline = FALSE),
+         xaxis = list(title = "Mexico Temperature",zeroline = FALSE))
+p_correlation_Mexico
+
+cor <- cor.test(correlation_Mexico$temp_Mexico_food.Value,correlation_Mexico$Mexico_Annual_gpv.growth_rate)
+p_Mexico<-cor$p.value
+cor_Mexico<-cor$estimate
+
+
+```
+
+```{r,echo=FALSE, warning=FALSE}
+
+# South America
+
+SouthAmerica_gross_production_value<-read.csv(file="/Users/xiaomengkong/Desktop/data698/FAOSTAT/SouthAmerica_grossProductionValue.csv")
+Brazil_gross_production_value <- SouthAmerica_gross_production_value %>% filter (Area=="Brazil")
+Jamaica_gross_production_value <-SouthAmerica_gross_production_value %>% filter (Area=="Jamaica")
+DR_gross_production_value<-read.csv(file="/Users/xiaomengkong/Desktop/data698/FAOSTAT/DR_grossProductionValue.csv")
+
+
+# Brazil
+
+Brazil_gpv <- Brazil_gross_production_value 
+x <- Brazil_gpv$Value
+Brazil_gpv <- aggregate(x~ Year,data=Brazil_gpv, sum)
+Brazil_gpv 
+Brazil_Annual_gpv <- data.frame("Year"=1991:2015,"Value"=Brazil_gpv$x)
+Brazil_Annual_gpv$growth_rate <- round(growth_rate(Brazil_Annual_gpv$Value),2)
+temp_Brazil_food <-read.csv(file="/Users/xiaomengkong/Desktop/data698/dataset/ncdc_noaa/Brazil_temperature.csv")
+
+temp_Brazil_food<- temp_Brazil_food%>% filter (Year<=2015 & Year >=1992)
+Brazil_Annual_gpv<- Brazil_Annual_gpv%>% filter (Year<=2015 & Year >=1992)
+correlation_Brazil <- data.frame(Brazil_Annual_gpv$growth_rate,temp_Brazil_food$Value)
+
+p_correlation_Brazil <- plot_ly(data=correlation_Brazil,x=~temp_Brazil_food.Value,y=~Brazil_Annual_gpv.growth_rate)%>%
+  layout(title = 'Brazil Gross Production Values and Temperature between 1992 and 2015',
+         yaxis = list(title = "Gross Production Values Million$",zeroline = FALSE),
+         xaxis = list(title = "Brazil Temperature",zeroline = FALSE))
+p_correlation_Brazil
+
+cor <- cor.test(correlation_Brazil$temp_Brazil_food.Value,correlation_Brazil$Brazil_Annual_gpv.growth_rate)
+p_Brazil<-cor$p.value
+cor_Brazil<-cor$estimate
+
+
+
+# Jamaica
+
+Jamaica_gpv <- Jamaica_gross_production_value 
+x <- Jamaica_gpv$Value
+Jamaica_gpv <- aggregate(x~ Year,data=Jamaica_gpv, sum)
+
+Jamaica_Annual_gpv <- data.frame("Year"=1991:2015,"Value"=Jamaica_gpv$x)
+Jamaica_Annual_gpv$growth_rate <- round(growth_rate(Jamaica_Annual_gpv$Value),2)
+temp_Jamaica_food <-read.csv(file="/Users/xiaomengkong/Desktop/data698/dataset/ncdc_noaa/Jamaica_temperature.csv")
+
+temp_Jamaica_food<- temp_Jamaica_food%>% filter (Year<=2015 & Year >=1992)
+Jamaica_Annual_gpv<- Jamaica_Annual_gpv%>% filter (Year<=2015 & Year >=1992)
+correlation_Jamaica <- data.frame(Jamaica_Annual_gpv$growth_rate,temp_Jamaica_food$Value)
+
+p_correlation_Jamaica <- plot_ly(data=correlation_Jamaica,x=~temp_Jamaica_food.Value,y=~Jamaica_Annual_gpv.growth_rate)%>%
+  layout(title = 'Jamaica Gross Production Values and Temperature between 1992 and 2015',
+         yaxis = list(title = "Gross Production Values Million$",zeroline = FALSE),
+         xaxis = list(title = "Jamaica Temperature",zeroline = FALSE))
+p_correlation_Jamaica
+
+cor <- cor.test(correlation_Jamaica$temp_Jamaica_food.Value,correlation_Jamaica$Jamaica_Annual_gpv.growth_rate)
+p_Jamaica<-cor$p.value
+cor_Jamaica<-cor$estimate
+
+
+
+# DR
+DR_gpv <- DR_gross_production_value 
+x <- DR_gpv$Value
+DR_gpv <- aggregate(x~ Year,data=DR_gpv, sum)
+DR_Annual_gpv <- data.frame("Year"=1991:2015,"Value"=DR_gpv$x)
+DR_Annual_gpv$growth_rate <- round(growth_rate(DR_Annual_gpv$Value),2)
+temp_DR_food <-read.csv(file="/Users/xiaomengkong/Desktop/data698/dataset/ncdc_noaa/DR_temperature.csv")
+
+temp_DR_food<- temp_DR_food%>% filter (Year<=2015 & Year >=1992)
+DR_Annual_gpv<- DR_Annual_gpv%>% filter (Year<=2015 & Year >=1992)
+correlation_DR <- data.frame(DR_Annual_gpv$growth_rate,temp_DR_food$Value)
+
+p_correlation_DR <- plot_ly(data=correlation_DR,x=~temp_DR_food.Value,y=~DR_Annual_gpv.growth_rate)%>%
+  layout(title = 'DR Gross Production Values and Temperature between 1992 and 2015',
+         yaxis = list(title = "Gross Production Values Million$",zeroline = FALSE),
+         xaxis = list(title = "DR Temperature",zeroline = FALSE))
+p_correlation_DR
+
+cor <- cor.test(correlation_DR$temp_DR_food.Value,correlation_DR$DR_Annual_gpv.growth_rate)
+p_DR<-cor$p.value
+cor_DR<-cor$estimate
+
+# Argentina
+Argentina_gross_production_value<-read.csv(file="/Users/xiaomengkong/Desktop/data698/FAOSTAT/Argentina_grossProductionValue.csv")
+Argentina_gpv_1991 <- as.data.frame(Argentina_gross_production_value %>% filter (Year=="1991"))
+Argentina_gpv_1992 <- as.data.frame(Argentina_gross_production_value %>% filter (Year=="1992"))
+Argentina_gpv_1993 <- as.data.frame(Argentina_gross_production_value %>% filter (Year=="1993"))
+Argentina_gpv_1994 <- as.data.frame(Argentina_gross_production_value %>% filter (Year=="1994"))
+Argentina_gpv_1995 <- as.data.frame(Argentina_gross_production_value %>% filter (Year=="1995"))
+Argentina_gpv_1996 <- as.data.frame(Argentina_gross_production_value %>% filter (Year=="1996"))
+Argentina_gpv_1997 <- as.data.frame(Argentina_gross_production_value %>% filter (Year=="1997"))
+Argentina_gpv_1998 <- as.data.frame(Argentina_gross_production_value %>% filter (Year=="1998"))
+Argentina_gpv_1999 <- as.data.frame(Argentina_gross_production_value %>% filter (Year=="1999"))
+Argentina_gpv_2000 <- as.data.frame(Argentina_gross_production_value %>% filter (Year=="2000"))
+Argentina_gpv_2001 <- as.data.frame(Argentina_gross_production_value %>% filter (Year=="2001"))
+Argentina_gpv_2002 <- as.data.frame(Argentina_gross_production_value %>% filter (Year=="2002"))
+Argentina_gpv_2003 <- as.data.frame(Argentina_gross_production_value %>% filter (Year=="2003"))
+Argentina_gpv_2004 <- as.data.frame(Argentina_gross_production_value %>% filter (Year=="2004"))
+Argentina_gpv_2005 <- as.data.frame(Argentina_gross_production_value %>% filter (Year=="2005"))
+Argentina_gpv_2006 <- as.data.frame(Argentina_gross_production_value %>% filter (Year=="2006"))
+Argentina_gpv_2007 <- as.data.frame(Argentina_gross_production_value %>% filter (Year=="2007"))
+Argentina_gpv_2008 <- as.data.frame(Argentina_gross_production_value %>% filter (Year=="2008"))
+Argentina_gpv_2009 <- as.data.frame(Argentina_gross_production_value %>% filter (Year=="2009"))
+Argentina_gpv_2010 <- as.data.frame(Argentina_gross_production_value %>% filter (Year=="2010"))
+Argentina_gpv_2011 <- as.data.frame(Argentina_gross_production_value %>% filter (Year=="2011"))
+Argentina_gpv_2012 <- as.data.frame(Argentina_gross_production_value %>% filter (Year=="2012"))
+Argentina_gpv_2013 <- as.data.frame(Argentina_gross_production_value %>% filter (Year=="2013"))
+Argentina_gpv_2014 <- as.data.frame(Argentina_gross_production_value %>% filter (Year=="2014"))
+Argentina_gpv_2015 <- as.data.frame(Argentina_gross_production_value %>% filter (Year=="2015"))
+
+Total91<- sum(Argentina_gpv_1991[,'Value'])
+Total92<- sum(Argentina_gpv_1992[,'Value'])
+Total93<- sum(Argentina_gpv_1993[,'Value'])
+Total94<- sum(Argentina_gpv_1994[,'Value'])
+Total95<- sum(Argentina_gpv_1995[,'Value'])
+Total96<- sum(Argentina_gpv_1996[,'Value'])
+Total97<- sum(Argentina_gpv_1997[,'Value'])
+Total98<- sum(Argentina_gpv_1998[,'Value'])
+Total99<- sum(Argentina_gpv_1999[,'Value'])
+Total00<- sum(Argentina_gpv_2000[,'Value'])
+Total01<- sum(Argentina_gpv_2001[,'Value'])
+Total02<- sum(Argentina_gpv_2002[,'Value'])
+Total03<- sum(Argentina_gpv_2003[,'Value'])
+Total04<- sum(Argentina_gpv_2004[,'Value'])
+Total05<- sum(Argentina_gpv_2005[,'Value'])
+Total06<- sum(Argentina_gpv_2006[,'Value'])
+Total07<- sum(Argentina_gpv_2007[,'Value'])
+Total08<- sum(Argentina_gpv_2008[,'Value'])
+Total09<- sum(Argentina_gpv_2009[,'Value'])
+Total10<- sum(Argentina_gpv_2010[,'Value'])
+Total11<- sum(Argentina_gpv_2011[,'Value'])
+Total12<- sum(Argentina_gpv_2012[,'Value'])
+Total13<- sum(Argentina_gpv_2013[,'Value'])
+Total14<- sum(Argentina_gpv_2014[,'Value'])
+Total15<- sum(Argentina_gpv_2015[,'Value'])
+Argentina_Annual_gpv <- data.frame("Year"=1991:2015,"Value"=c(Total91,Total92,Total93,Total94,Total95,Total96,Total97,Total98,Total99,Total00,Total01,Total02,Total03,Total04,Total05,Total06,Total07,Total08,Total09,Total10,Total11,Total12,Total13,Total14,Total15))
+Argentina_Annual_gpv$growth_rate <- round(growth_rate(Argentina_Annual_gpv$Value),2)
+
+temp_Argentina_food <-read.csv(file="/Users/xiaomengkong/Desktop/data698/dataset/ncdc_noaa/Argentina_temperature.csv")
+
+temp_Argentina_food<- temp_Argentina_food%>% filter (Year<=2015 & Year >=1992)
+Argentina_Annual_gpv<- Argentina_Annual_gpv%>% filter (Year<=2015 & Year >=1992)
+correlation_Argentina <- data.frame(Argentina_Annual_gpv$growth_rate,temp_Argentina_food$Value)
+
+p_correlation_Argentina <- plot_ly(data=correlation_Argentina,x=~temp_Argentina_food.Value,y=~Argentina_Annual_gpv.growth_rate)%>%
+  layout(title = 'Argentina Gross Production Values and Temperature between 1992 and 2015',
+         yaxis = list(title = "Gross Production Values Million$"),
+         xaxis = list(title = "Argentina Temperature",zeroline = FALSE))
+p_correlation_Argentina
+
+cor <- cor.test(correlation_Argentina$temp_Argentina_food.Value,correlation_Argentina$Argentina_Annual_gpv.growth_rate)
+p_Argentina<-cor$p.value
+cor_Argentina<-cor$estimate
+
+
+```
+
+
+```{r,echo=FALSE, warning=FALSE}
+# Africa Gross Production Value
+Africa_gross_production_value<-read.csv(file="/Users/xiaomengkong/Desktop/data698/FAOSTAT/Africa_grossProductionValue.csv")
+
+Congo_gross_production_value <- Africa_gross_production_value %>% filter (Area=="Congo")
+Ethiopia_gross_production_value <-Africa_gross_production_value %>% filter (Area=="Ethiopia" | Area== "Ethiopia PDR")
+Egypt_gross_production_value <- Africa_gross_production_value %>% filter (Area=="Egypt")
+Mali_gross_production_value <- Africa_gross_production_value %>% filter (Area=="Mali")
+
+
+# Congo
+Congo_gpv <- Congo_gross_production_value 
+x <- Congo_gpv$Value
+Congo_gpv <- aggregate(x~ Year,data=Congo_gpv, sum)
+
+Congo_Annual_gpv <- data.frame("Year"=1991:2015,"Value"=Congo_gpv$x)
+Congo_Annual_gpv$growth_rate <- round(growth_rate(Congo_Annual_gpv$Value),2)
+
+temp_Congo_food <-read.csv(file="/Users/xiaomengkong/Desktop/data698/dataset/ncdc_noaa/Congo_temperature.csv")
+
+temp_Congo_food<- temp_Congo_food%>% filter (Year<=2015 & Year >=1992)
+Congo_Annual_gpv<- Congo_Annual_gpv%>% filter (Year<=2015 & Year >=1992)
+correlation_Congo <- data.frame(Congo_Annual_gpv$growth_rate,temp_Congo_food$Value)
+
+p_correlation_Congo <- plot_ly(data=correlation_Congo,x=~temp_Congo_food.Value,y=~Congo_Annual_gpv.growth_rate)%>%
+  layout(title = 'Congo Gross Production Values and Temperature between 1992 and 2015',
+         yaxis = list(title = "Gross Production Values Million$",zeroline = FALSE),
+         xaxis = list(title = "Congo Temperature",zeroline = FALSE))
+p_correlation_Congo
+
+cor <- cor.test(correlation_Congo$temp_Congo_food.Value,correlation_Congo$Congo_Annual_gpv.growth_rate)
+p_Congo<-cor$p.value
+cor_Congo<-cor$estimate
+
+# Ethiopia
+Ethiopia_gpv <- Ethiopia_gross_production_value 
+x <- Ethiopia_gpv$Value
+Ethiopia_gpv <- aggregate(x~ Year,data=Ethiopia_gpv, sum)
+
+Ethiopia_Annual_gpv <- data.frame("Year"=1991:2015,"Value"=Ethiopia_gpv$x)
+Ethiopia_Annual_gpv$growth_rate <- round(growth_rate(Ethiopia_Annual_gpv$Value),2)
+
+
+temp_Ethiopia_food <-read.csv(file="/Users/xiaomengkong/Desktop/data698/dataset/ncdc_noaa/Ethiopia_temperature.csv")
+
+temp_Ethiopia_food<- temp_Ethiopia_food%>% filter (Year<=2015 & Year >=1992)
+Ethiopia_Annual_gpv<- Ethiopia_Annual_gpv%>% filter (Year<=2015 & Year >=1992)
+correlation_Ethiopia <- data.frame(Ethiopia_Annual_gpv$growth_rate,temp_Ethiopia_food$Value)
+
+p_correlation_Ethiopia <- plot_ly(data=correlation_Ethiopia,x=~temp_Ethiopia_food.Value,y=~Ethiopia_Annual_gpv.growth_rate)%>%
+  layout(title = 'Ethiopia Gross Production Values and Temperature between 1992 and 2015',
+         yaxis = list(title = "Gross Production Values Million$",zeroline = FALSE),
+         xaxis = list(title = "Ethiopia Temperature",zeroline = FALSE))
+p_correlation_Ethiopia
+
+cor <- cor.test(correlation_Ethiopia$temp_Ethiopia_food.Value,correlation_Ethiopia$Ethiopia_Annual_gpv.growth_rate)
+p_Ethiopia<-cor$p.value
+cor_Ethiopia<-cor$estimate
+
+# Egypt
+Egypt_gpv <- Egypt_gross_production_value 
+x <- Egypt_gpv$Value
+Egypt_gpv <- aggregate(x~ Year,data=Egypt_gpv, sum)
+
+Egypt_Annual_gpv <- data.frame("Year"=1991:2015,"Value"=Egypt_gpv$x)
+Egypt_Annual_gpv$growth_rate <- round(growth_rate(Egypt_Annual_gpv$Value),2)
+
+
+temp_Egypt_food <-read.csv(file="/Users/xiaomengkong/Desktop/data698/dataset/ncdc_noaa/Egypt_temperature.csv")
+
+temp_Egypt_food<- temp_Egypt_food%>% filter (Year<=2015 & Year >=1992)
+Egypt_Annual_gpv<- Egypt_Annual_gpv%>% filter (Year<=2015 & Year >=1992)
+correlation_Egypt <- data.frame(Egypt_Annual_gpv$growth_rate,temp_Egypt_food$Value)
+
+p_correlation_Egypt <- plot_ly(data=correlation_Egypt,x=~temp_Egypt_food.Value,y=~Egypt_Annual_gpv.growth_rate)%>%
+  layout(title = 'Egypt Gross Production Values and Temperature between 1992 and 2015',
+         yaxis = list(title = "Gross Production Values Million$",zeroline = FALSE),
+         xaxis = list(title = "Egypt Temperature",zeroline = FALSE))
+p_correlation_Egypt
+
+cor <- cor.test(correlation_Egypt$temp_Egypt_food.Value,correlation_Egypt$Egypt_Annual_gpv.growth_rate)
+p_Egypt<-cor$p.value
+cor_Egypt<-cor$estimate
+
+
+# Madagascar
+Madagascar_grossProductionValue<-read.csv(file="/Users/xiaomengkong/Desktop/data698/FAOSTAT/Madagascar_grossProductionValue.csv")
+Madagascar_gpv <- Madagascar_grossProductionValue 
+x <- Madagascar_gpv$Value
+Madagascar_gpv <- aggregate(x~ Year,data=Madagascar_gpv, sum)
+
+Madagascar_Annual_gpv <- data.frame("Year"=1991:2015,"Value"=Madagascar_gpv$x)
+Madagascar_Annual_gpv$growth_rate <- round(growth_rate(Madagascar_Annual_gpv$Value),2)
+
+
+
+temp_Madagascar_food <-read.csv(file="/Users/xiaomengkong/Desktop/data698/dataset/ncdc_noaa/Madagascar_temperature.csv")
+
+temp_Madagascar_food<- temp_Madagascar_food%>% filter (Year<=2015 & Year >=1992)
+Madagascar_Annual_gpv<- Madagascar_Annual_gpv%>% filter (Year<=2015 & Year >=1992)
+correlation_Madagascar <- data.frame(Madagascar_Annual_gpv$growth_rate,temp_Madagascar_food$Value)
+
+p_correlation_Madagascar <- plot_ly(data=correlation_Madagascar,x=~temp_Madagascar_food.Value,y=~Madagascar_Annual_gpv.growth_rate)%>%
+  layout(title = 'Madagascar Gross Production Values and Temperature between 1992 and 2015',
+         yaxis = list(title = "Gross Production Values Million$",zeroline = FALSE),
+         xaxis = list(title = "Madagascar Temperature",zeroline = FALSE))
+p_correlation_Madagascar
+
+cor <- cor.test(correlation_Madagascar$temp_Madagascar_food.Value,correlation_Madagascar$Madagascar_Annual_gpv.growth_rate)
+p_Madagascar<-cor$p.value
+cor_Madagascar<-cor$estimate
+```
+
+```{r,echo=FALSE,warning=FALSE}
+# Asia Gross Production Value
+Asia_gross_production_value<-read.csv(file="/Users/xiaomengkong/Desktop/data698/FAOSTAT/Asia_grossProductionValue.csv")
+China_gross_production_value <- Asia_gross_production_value %>% filter (Area=="China, mainland")
+India_gross_production_value <-Asia_gross_production_value %>% filter (Area=="India")
+Indonesia_gross_production_value <- Asia_gross_production_value %>% filter (Area=="Indonesia")
+Iran_gross_production_value <- Asia_gross_production_value %>% filter (Area=="Iran (Islamic Republic of)")
+Japan_gross_production_value <- Asia_gross_production_value %>% filter (Area=="Japan")
+
+
+# China
+China_gpv <- China_gross_production_value 
+x <- China_gpv$Value
+China_gpv <- aggregate(x~ Year,data=China_gpv, sum)
+
+China_Annual_gpv <- data.frame("Year"=1991:2015,"Value"=China_gpv$x)
+China_Annual_gpv$growth_rate <- round(growth_rate(China_Annual_gpv$Value),2)
+
+
+temp_China_food <-read.csv(file="/Users/xiaomengkong/Desktop/data698/dataset/ncdc_noaa/China_temperature.csv")
+
+temp_China_food<- temp_China_food%>% filter (Year<=2015 & Year >=1992)
+China_Annual_gpv<- China_Annual_gpv%>% filter (Year<=2015 & Year >=1992)
+correlation_China <- data.frame(China_Annual_gpv$growth_rate,temp_China_food$Value)
+
+p_correlation_China <- plot_ly(data=correlation_China,x=~temp_China_food.Value,y=~China_Annual_gpv.growth_rate)%>%
+  layout(title = 'China Gross Production Values and Temperature between 1992 and 2015',
+         yaxis = list(title = "Gross Production Values $",zeroline = FALSE),
+         xaxis = list(title = "China Temperature",zeroline = FALSE))
+p_correlation_China
+
+cor <- cor.test(correlation_China$temp_China_food.Value,correlation_China$China_Annual_gpv.growth_rate)
+p_China<-cor$p.value
+cor_China<-cor$estimate
+
+# India
+
+India_gpv <- India_gross_production_value 
+x <- India_gpv$Value
+India_gpv <- aggregate(x~ Year,data=India_gpv, sum)
+
+India_Annual_gpv <- data.frame("Year"=1991:2015,"Value"=India_gpv$x)
+India_Annual_gpv$growth_rate <- round(growth_rate(India_Annual_gpv$Value),2)
+
+
+
+temp_India_food <-read.csv(file="/Users/xiaomengkong/Desktop/data698/dataset/ncdc_noaa/India_temperature.csv")
+
+temp_India_food<- temp_India_food%>% filter (Year<=2015 & Year >=1992)
+India_Annual_gpv<- India_Annual_gpv%>% filter (Year<=2015 & Year >=1992)
+correlation_India <- data.frame(India_Annual_gpv$growth_rate,temp_India_food$Value)
+
+p_correlation_India <- plot_ly(data=correlation_India,x=~temp_India_food.Value,y=~India_Annual_gpv.growth_rate)%>%
+  layout(title = 'India Gross Production Values and Temperature between 1992 and 2015',
+         yaxis = list(title = "Gross Production Values $",zeroline = FALSE),
+         xaxis = list(title = "India Temperature",zeroline = FALSE))
+p_correlation_India
+
+cor <- cor.test(correlation_India$temp_India_food.Value,correlation_India$India_Annual_gpv.growth_rate)
+p_India<-cor$p.value
+cor_India<-cor$estimate
+
+
+# Indonesia
+
+Indonesia_gpv <- Indonesia_gross_production_value 
+x <- Indonesia_gpv$Value
+Indonesia_gpv <- aggregate(x~ Year,data=Indonesia_gpv, sum)
+
+Indonesia_Annual_gpv <- data.frame("Year"=1991:2015,"Value"=Indonesia_gpv$x)
+Indonesia_Annual_gpv$growth_rate <- round(growth_rate(Indonesia_Annual_gpv$Value),2)
+
+
+temp_Indonesia_food <-read.csv(file="/Users/xiaomengkong/Desktop/data698/dataset/ncdc_noaa/Indonesia_temperature.csv")
+
+temp_Indonesia_food<- temp_Indonesia_food%>% filter (Year<=2015 & Year >=1992)
+Indonesia_Annual_gpv<- Indonesia_Annual_gpv%>% filter (Year<=2015 & Year >=1992)
+correlation_Indonesia <- data.frame(Indonesia_Annual_gpv$growth_rate,temp_Indonesia_food$Value)
+
+p_correlation_Indonesia <- plot_ly(data=correlation_Indonesia,x=~temp_Indonesia_food.Value,y=~Indonesia_Annual_gpv.growth_rate)%>%
+  layout(title = 'Indonesia Gross Production Values and Temperature between 1992 and 2015',
+         yaxis = list(title = "Gross Production Values $", zeroline = FALSE),
+         xaxis = list(title = "Indonesia Temperature",zeroline = FALSE))
+p_correlation_Indonesia
+
+cor <- cor.test(correlation_Indonesia$temp_Indonesia_food.Value,correlation_Indonesia$Indonesia_Annual_gpv.growth_rate)
+p_Indonesia<-cor$p.value
+cor_Indonesia<-cor$estimate
+
+
+# Iran
+
+Iran_gpv <- Iran_gross_production_value 
+x <- Iran_gpv$Value
+Iran_gpv <- aggregate(x~ Year,data=Iran_gpv, sum)
+
+Iran_Annual_gpv <- data.frame("Year"=1991:2015,"Value"=Iran_gpv$x)
+Iran_Annual_gpv$growth_rate <- round(growth_rate(Iran_Annual_gpv$Value),2)
+
+
+temp_Iran_food <-read.csv(file="/Users/xiaomengkong/Desktop/data698/dataset/ncdc_noaa/Iran_temperature.csv")
+
+temp_Iran_food<- temp_Iran_food%>% filter (Year<=2015 & Year >=1992)
+Iran_Annual_gpv<- Iran_Annual_gpv%>% filter (Year<=2015 & Year >=1992)
+correlation_Iran <- data.frame(Iran_Annual_gpv$growth_rate,temp_Iran_food$Value)
+
+p_correlation_Iran <- plot_ly(data=correlation_Iran,x=~temp_Iran_food.Value,y=~Iran_Annual_gpv.growth_rate)%>%
+  layout(title = 'Iran Gross Production Values and Temperature between 1992 and 2015',
+         yaxis = list(title = "Gross Production Values $",zeroline = FALSE),
+         xaxis = list(title = "Iran Temperature",zeroline = FALSE))
+p_correlation_Iran
+
+cor <- cor.test(correlation_Iran$temp_Iran_food.Value,correlation_Iran$Iran_Annual_gpv.growth_rate)
+p_Iran<-cor$p.value
+cor_Iran<-cor$estimate
+
+# Cambodia
+Cambodia_gross_production_value <-read.csv(file="/Users/xiaomengkong/Desktop/data698/FAOSTAT/Cambodia_grossProductionValue.csv")
+Cambodia_gpv <- Cambodia_gross_production_value 
+x <- Cambodia_gpv$Value
+Cambodia_gpv <- aggregate(x~ Year,data=Cambodia_gpv, sum)
+
+Cambodia_Annual_gpv <- data.frame("Year"=1991:2015,"Value"=Cambodia_gpv$x)
+Cambodia_Annual_gpv$growth_rate <- round(growth_rate(Cambodia_Annual_gpv$Value),2)
+
+temp_Cambodia_food <-read.csv(file="/Users/xiaomengkong/Desktop/data698/dataset/ncdc_noaa/Cambodia_temperature.csv")
+
+temp_Cambodia_food<- temp_Cambodia_food%>% filter (Year<=2015 & Year >=1992)
+Cambodia_Annual_gpv<- Cambodia_Annual_gpv%>% filter (Year<=2015 & Year >=1992)
+correlation_Cambodia <- data.frame(Cambodia_Annual_gpv$growth_rate,temp_Cambodia_food$Value)
+
+p_correlation_Cambodia <- plot_ly(data=correlation_Cambodia,x=~temp_Cambodia_food.Value,y=~Cambodia_Annual_gpv.growth_rate)%>%
+  layout(title = 'Cambodia Gross Production Values and Temperature between 1992 and 2015',
+         yaxis = list(title = "Gross Production Values $", zeroline = FALSE),
+         xaxis = list(title = "Cambodia Temperature",zeroline = FALSE))
+p_correlation_Cambodia
+
+cor <- cor.test(correlation_Cambodia$temp_Cambodia_food.Value,correlation_Cambodia$Cambodia_Annual_gpv.growth_rate)
+p_Cambodia<-cor$p.value
+cor_Cambodia<-cor$estimate
+
+
+# Thailand
+Thailand_gross_production_value <-read.csv(file="/Users/xiaomengkong/Desktop/data698/FAOSTAT/Thailand_grossProductionValue.csv")
+
+Thailand_gpv <- Thailand_gross_production_value 
+x <- Thailand_gpv$Value
+Thailand_gpv <- aggregate(x~ Year,data=Thailand_gpv, sum)
+
+Thailand_Annual_gpv <- data.frame("Year"=1991:2015,"Value"=Thailand_gpv$x)
+Thailand_Annual_gpv$growth_rate <- round(growth_rate(Thailand_Annual_gpv$Value),2)
+
+
+
+temp_Thailand_food <-read.csv(file="/Users/xiaomengkong/Desktop/data698/dataset/ncdc_noaa/Thailand_temperature.csv")
+
+temp_Thailand_food<- temp_Thailand_food%>% filter (Year<=2015 & Year >=1992)
+Thailand_Annual_gpv<- Thailand_Annual_gpv%>% filter (Year<=2015 & Year >=1992)
+correlation_Thailand <- data.frame(Thailand_Annual_gpv$growth_rate,temp_Thailand_food$Value)
+
+p_correlation_Thailand <- plot_ly(data=correlation_Thailand,x=~temp_Thailand_food.Value,y=~Thailand_Annual_gpv.growth_rate)%>%
+  layout(title = 'Thailand Gross Production Values and Temperature between 1992 and 2015',
+         yaxis = list(title = "Gross Production Values $",zeroline = FALSE),
+         xaxis = list(title = "Thailand Temperature",zeroline = FALSE))
+p_correlation_Thailand
+
+cor <- cor.test(correlation_Thailand$temp_Thailand_food.Value,correlation_Thailand$Thailand_Annual_gpv.growth_rate)
+p_Thailand<-cor$p.value
+cor_Thailand<-cor$estimate
+
+
+
+
+# Japan
+
+Japan_gpv <- Japan_gross_production_value 
+x <- Japan_gpv$Value
+Japan_gpv <- aggregate(x~ Year,data=Japan_gpv, sum)
+
+Japan_Annual_gpv <- data.frame("Year"=1991:2015,"Value"=Japan_gpv$x)
+Japan_Annual_gpv$growth_rate <- round(growth_rate(Japan_Annual_gpv$Value),2)
+
+
+
+temp_Japan_food <-read.csv(file="/Users/xiaomengkong/Desktop/data698/dataset/ncdc_noaa/Japan_temperature.csv")
+
+temp_Japan_food<- temp_Japan_food%>% filter (Year<=2015 & Year >=1992)
+Japan_Annual_gpv<- Japan_Annual_gpv%>% filter (Year<=2015 & Year >=1992)
+correlation_Japan <- data.frame(Japan_Annual_gpv$growth_rate,temp_Japan_food$Value)
+
+p_correlation_Japan <- plot_ly(data=correlation_Japan,x=~temp_Japan_food.Value,y=~Japan_Annual_gpv.growth_rate)%>%
+  layout(title = 'Japan Gross Production Values and Temperature between 1992 and 2015',
+         yaxis = list(title = "Gross Production Values $", zeroline = FALSE),
+         xaxis = list(title = "Japan Temperature",zeroline = FALSE))
+p_correlation_Japan
+
+cor <- cor.test(correlation_Japan$temp_Japan_food.Value,correlation_Japan$Japan_Annual_gpv.growth_rate)
+p_Japan<-cor$p.value
+cor_Japan<-cor$estimate
+
+# Qatar
+Qatar_gross_production_value <-read.csv(file="/Users/xiaomengkong/Desktop/data698/FAOSTAT/Qatar_grossProductionValue.csv")
+Japan_gpv <- Japan_gross_production_value 
+x <- Japan_gpv$Value
+Japan_gpv <- aggregate(x~ Year,data=Japan_gpv, sum)
+
+Japan_Annual_gpv <- data.frame("Year"=1991:2015,"Value"=Japan_gpv$x)
+Japan_Annual_gpv$growth_rate <- round(growth_rate(Japan_Annual_gpv$Value),2)
+Qatar_gpv_1991 <- as.data.frame(Qatar_gross_production_value %>% filter (Year=="1991"))
+Qatar_gpv_1992 <- as.data.frame(Qatar_gross_production_value %>% filter (Year=="1992"))
+Qatar_gpv_1993 <- as.data.frame(Qatar_gross_production_value %>% filter (Year=="1993"))
+Qatar_gpv_1994 <- as.data.frame(Qatar_gross_production_value %>% filter (Year=="1994"))
+Qatar_gpv_1995 <- as.data.frame(Qatar_gross_production_value %>% filter (Year=="1995"))
+Qatar_gpv_1996 <- as.data.frame(Qatar_gross_production_value %>% filter (Year=="1996"))
+Qatar_gpv_1997 <- as.data.frame(Qatar_gross_production_value %>% filter (Year=="1997"))
+Qatar_gpv_1998 <- as.data.frame(Qatar_gross_production_value %>% filter (Year=="1998"))
+Qatar_gpv_1999 <- as.data.frame(Qatar_gross_production_value %>% filter (Year=="1999"))
+Qatar_gpv_2000 <- as.data.frame(Qatar_gross_production_value %>% filter (Year=="2000"))
+Qatar_gpv_2001 <- as.data.frame(Qatar_gross_production_value %>% filter (Year=="2001"))
+Qatar_gpv_2002 <- as.data.frame(Qatar_gross_production_value %>% filter (Year=="2002"))
+Qatar_gpv_2003 <- as.data.frame(Qatar_gross_production_value %>% filter (Year=="2003"))
+Qatar_gpv_2004 <- as.data.frame(Qatar_gross_production_value %>% filter (Year=="2004"))
+Qatar_gpv_2005 <- as.data.frame(Qatar_gross_production_value %>% filter (Year=="2005"))
+Qatar_gpv_2006 <- as.data.frame(Qatar_gross_production_value %>% filter (Year=="2006"))
+Qatar_gpv_2007 <- as.data.frame(Qatar_gross_production_value %>% filter (Year=="2007"))
+Qatar_gpv_2008 <- as.data.frame(Qatar_gross_production_value %>% filter (Year=="2008"))
+Qatar_gpv_2009 <- as.data.frame(Qatar_gross_production_value %>% filter (Year=="2009"))
+Qatar_gpv_2010 <- as.data.frame(Qatar_gross_production_value %>% filter (Year=="2010"))
+Qatar_gpv_2011 <- as.data.frame(Qatar_gross_production_value %>% filter (Year=="2011"))
+Qatar_gpv_2012 <- as.data.frame(Qatar_gross_production_value %>% filter (Year=="2012"))
+Qatar_gpv_2013 <- as.data.frame(Qatar_gross_production_value %>% filter (Year=="2013"))
+Qatar_gpv_2014 <- as.data.frame(Qatar_gross_production_value %>% filter (Year=="2014"))
+Qatar_gpv_2015 <- as.data.frame(Qatar_gross_production_value %>% filter (Year=="2015"))
+
+Total91<- sum(Qatar_gpv_1991[,'Value'])
+Total92<- sum(Qatar_gpv_1992[,'Value'])
+Total93<- sum(Qatar_gpv_1993[,'Value'])
+Total94<- sum(Qatar_gpv_1994[,'Value'])
+Total95<- sum(Qatar_gpv_1995[,'Value'])
+Total96<- sum(Qatar_gpv_1996[,'Value'])
+Total97<- sum(Qatar_gpv_1997[,'Value'])
+Total98<- sum(Qatar_gpv_1998[,'Value'])
+Total99<- sum(Qatar_gpv_1999[,'Value'])
+Total00<- sum(Qatar_gpv_2000[,'Value'])
+Total01<- sum(Qatar_gpv_2001[,'Value'])
+Total02<- sum(Qatar_gpv_2002[,'Value'])
+Total03<- sum(Qatar_gpv_2003[,'Value'])
+Total04<- sum(Qatar_gpv_2004[,'Value'])
+Total05<- sum(Qatar_gpv_2005[,'Value'])
+Total06<- sum(Qatar_gpv_2006[,'Value'])
+Total07<- sum(Qatar_gpv_2007[,'Value'])
+Total08<- sum(Qatar_gpv_2008[,'Value'])
+Total09<- sum(Qatar_gpv_2009[,'Value'])
+Total10<- sum(Qatar_gpv_2010[,'Value'])
+Total11<- sum(Qatar_gpv_2011[,'Value'])
+Total12<- sum(Qatar_gpv_2012[,'Value'])
+Total13<- sum(Qatar_gpv_2013[,'Value'])
+Total14<- sum(Qatar_gpv_2014[,'Value'])
+Total15<- sum(Qatar_gpv_2015[,'Value'])
+Qatar_Annual_gpv <- data.frame("Year"=1991:2015,"Value"=c(Total91,Total92,Total93,Total94,Total95,Total96,Total97,Total98,Total99,Total00,Total01,Total02,Total03,Total04,Total05,Total06,Total07,Total08,Total09,Total10,Total11,Total12,Total13,Total14,Total15))
+Qatar_Annual_gpv$growth_rate <- round(growth_rate(Qatar_Annual_gpv$Value),2)
+
+
+temp_Qatar_food <-read.csv(file="/Users/xiaomengkong/Desktop/data698/dataset/ncdc_noaa/Qatar_temperature.csv")
+
+temp_Qatar_food<- temp_Qatar_food%>% filter (Year<=2015 & Year >=1992)
+Qatar_Annual_gpv<- Qatar_Annual_gpv%>% filter (Year<=2015 & Year >=1992)
+correlation_Qatar <- data.frame(Qatar_Annual_gpv$growth_rate,temp_Qatar_food$Value)
+
+p_correlation_Qatar <- plot_ly(data=correlation_Qatar,x=~temp_Qatar_food.Value,y=~Qatar_Annual_gpv.growth_rate)%>%
+  layout(title = 'Qatar Gross Production Values and Temperature between 1992 and 2015',
+         yaxis = list(title = "Gross Production Values $",zeroline = FALSE),
+         xaxis = list(title = "Qatar Temperature",zeroline = FALSE))
+p_correlation_Qatar
+
+cor <- cor.test(correlation_Qatar$temp_Qatar_food.Value,correlation_Qatar$Qatar_Annual_gpv.growth_rate)
+p_Qatar<-cor$p.value
+cor_Qatar<-cor$estimate
+```
+
+```{r,echo=FALSE,warning=FALSE}
+
+# Europe Gross Production Value
+Europe_gross_production_value<-read.csv(file="/Users/xiaomengkong/Desktop/data698/FAOSTAT/Europe_grossProductionValue.csv")
+Norway_gross_production_value <- Europe_gross_production_value %>% filter (Area=="Norway")
+France_gross_production_value <-Europe_gross_production_value %>% filter (Area=="France")
+Turkey_gross_production_value <- Europe_gross_production_value %>% filter (Area=="Turkey")
+Russia_gross_production_value <- Europe_gross_production_value %>% filter (Area=="Russian Federation")
+Ireland_gross_production_value <-read.csv(file="/Users/xiaomengkong/Desktop/data698/FAOSTAT/Qatar_grossProductionValue.csv")
+
+# Norway
+
+
+Norway_gpv_1991 <- as.data.frame(Norway_gross_production_value %>% filter (Year=="1991"))
+Norway_gpv_1992 <- as.data.frame(Norway_gross_production_value %>% filter (Year=="1992"))
+Norway_gpv_1993 <- as.data.frame(Norway_gross_production_value %>% filter (Year=="1993"))
+Norway_gpv_1994 <- as.data.frame(Norway_gross_production_value %>% filter (Year=="1994"))
+Norway_gpv_1995 <- as.data.frame(Norway_gross_production_value %>% filter (Year=="1995"))
+Norway_gpv_1996 <- as.data.frame(Norway_gross_production_value %>% filter (Year=="1996"))
+Norway_gpv_1997 <- as.data.frame(Norway_gross_production_value %>% filter (Year=="1997"))
+Norway_gpv_1998 <- as.data.frame(Norway_gross_production_value %>% filter (Year=="1998"))
+Norway_gpv_1999 <- as.data.frame(Norway_gross_production_value %>% filter (Year=="1999"))
+Norway_gpv_2000 <- as.data.frame(Norway_gross_production_value %>% filter (Year=="2000"))
+Norway_gpv_2001 <- as.data.frame(Norway_gross_production_value %>% filter (Year=="2001"))
+Norway_gpv_2002 <- as.data.frame(Norway_gross_production_value %>% filter (Year=="2002"))
+Norway_gpv_2003 <- as.data.frame(Norway_gross_production_value %>% filter (Year=="2003"))
+Norway_gpv_2004 <- as.data.frame(Norway_gross_production_value %>% filter (Year=="2004"))
+Norway_gpv_2005 <- as.data.frame(Norway_gross_production_value %>% filter (Year=="2005"))
+Norway_gpv_2006 <- as.data.frame(Norway_gross_production_value %>% filter (Year=="2006"))
+Norway_gpv_2007 <- as.data.frame(Norway_gross_production_value %>% filter (Year=="2007"))
+Norway_gpv_2008 <- as.data.frame(Norway_gross_production_value %>% filter (Year=="2008"))
+Norway_gpv_2009 <- as.data.frame(Norway_gross_production_value %>% filter (Year=="2009"))
+Norway_gpv_2010 <- as.data.frame(Norway_gross_production_value %>% filter (Year=="2010"))
+Norway_gpv_2011 <- as.data.frame(Norway_gross_production_value %>% filter (Year=="2011"))
+Norway_gpv_2012 <- as.data.frame(Norway_gross_production_value %>% filter (Year=="2012"))
+Norway_gpv_2013 <- as.data.frame(Norway_gross_production_value %>% filter (Year=="2013"))
+Norway_gpv_2014 <- as.data.frame(Norway_gross_production_value %>% filter (Year=="2014"))
+Norway_gpv_2015 <- as.data.frame(Norway_gross_production_value %>% filter (Year=="2015"))
+
+Total91<- sum(Norway_gpv_1991[,'Value'])
+Total92<- sum(Norway_gpv_1992[,'Value'])
+Total93<- sum(Norway_gpv_1993[,'Value'])
+Total94<- sum(Norway_gpv_1994[,'Value'])
+Total95<- sum(Norway_gpv_1995[,'Value'])
+Total96<- sum(Norway_gpv_1996[,'Value'])
+Total97<- sum(Norway_gpv_1997[,'Value'])
+Total98<- sum(Norway_gpv_1998[,'Value'])
+Total99<- sum(Norway_gpv_1999[,'Value'])
+Total00<- sum(Norway_gpv_2000[,'Value'])
+Total01<- sum(Norway_gpv_2001[,'Value'])
+Total02<- sum(Norway_gpv_2002[,'Value'])
+Total03<- sum(Norway_gpv_2003[,'Value'])
+Total04<- sum(Norway_gpv_2004[,'Value'])
+Total05<- sum(Norway_gpv_2005[,'Value'])
+Total06<- sum(Norway_gpv_2006[,'Value'])
+Total07<- sum(Norway_gpv_2007[,'Value'])
+Total08<- sum(Norway_gpv_2008[,'Value'])
+Total09<- sum(Norway_gpv_2009[,'Value'])
+Total10<- sum(Norway_gpv_2010[,'Value'])
+Total11<- sum(Norway_gpv_2011[,'Value'])
+Total12<- sum(Norway_gpv_2012[,'Value'])
+Total13<- sum(Norway_gpv_2013[,'Value'])
+Total14<- sum(Norway_gpv_2014[,'Value'])
+Total15<- sum(Norway_gpv_2015[,'Value'])
+Norway_Annual_gpv <- data.frame("Year"=1991:2015,"Value"=c(Total91,Total92,Total93,Total94,Total95,Total96,Total97,Total98,Total99,Total00,Total01,Total02,Total03,Total04,Total05,Total06,Total07,Total08,Total09,Total10,Total11,Total12,Total13,Total14,Total15))
+Norway_Annual_gpv$growth_rate <- round(growth_rate(Norway_Annual_gpv$Value),2)
+
+temp_Norway_food <-read.csv(file="/Users/xiaomengkong/Desktop/data698/dataset/ncdc_noaa/Norway_temperature.csv")
+
+temp_Norway_food<- temp_Norway_food%>% filter (Year<=2015 & Year >=1992)
+Norway_Annual_gpv<- Norway_Annual_gpv%>% filter (Year<=2015 & Year >=1992)
+correlation_Norway <- data.frame(Norway_Annual_gpv$growth_rate,temp_Norway_food$Value)
+
+p_correlation_Norway <- plot_ly(data=correlation_Norway,x=~temp_Norway_food.Value,y=~Norway_Annual_gpv.growth_rate)%>%
+  layout(title = 'Norway Gross Production Values and Temperature between 1992 and 2015',
+         yaxis = list(title = "Gross Production Values $",zeroline = FALSE),
+         xaxis = list(title = "Norway Temperature",zeroline = FALSE))
+p_correlation_Norway
+
+cor <- cor.test(correlation_Norway$temp_Norway_food.Value,correlation_Norway$Norway_Annual_gpv.growth_rate)
+p_Norway<-cor$p.value
+cor_Norway<-cor$estimate
+
+
+# France
+France_gpv_1991 <- as.data.frame(France_gross_production_value %>% filter (Year=="1991"))
+France_gpv_1992 <- as.data.frame(France_gross_production_value %>% filter (Year=="1992"))
+France_gpv_1993 <- as.data.frame(France_gross_production_value %>% filter (Year=="1993"))
+France_gpv_1994 <- as.data.frame(France_gross_production_value %>% filter (Year=="1994"))
+France_gpv_1995 <- as.data.frame(France_gross_production_value %>% filter (Year=="1995"))
+France_gpv_1996 <- as.data.frame(France_gross_production_value %>% filter (Year=="1996"))
+France_gpv_1997 <- as.data.frame(France_gross_production_value %>% filter (Year=="1997"))
+France_gpv_1998 <- as.data.frame(France_gross_production_value %>% filter (Year=="1998"))
+France_gpv_1999 <- as.data.frame(France_gross_production_value %>% filter (Year=="1999"))
+France_gpv_2000 <- as.data.frame(France_gross_production_value %>% filter (Year=="2000"))
+France_gpv_2001 <- as.data.frame(France_gross_production_value %>% filter (Year=="2001"))
+France_gpv_2002 <- as.data.frame(France_gross_production_value %>% filter (Year=="2002"))
+France_gpv_2003 <- as.data.frame(France_gross_production_value %>% filter (Year=="2003"))
+France_gpv_2004 <- as.data.frame(France_gross_production_value %>% filter (Year=="2004"))
+France_gpv_2005 <- as.data.frame(France_gross_production_value %>% filter (Year=="2005"))
+France_gpv_2006 <- as.data.frame(France_gross_production_value %>% filter (Year=="2006"))
+France_gpv_2007 <- as.data.frame(France_gross_production_value %>% filter (Year=="2007"))
+France_gpv_2008 <- as.data.frame(France_gross_production_value %>% filter (Year=="2008"))
+France_gpv_2009 <- as.data.frame(France_gross_production_value %>% filter (Year=="2009"))
+France_gpv_2010 <- as.data.frame(France_gross_production_value %>% filter (Year=="2010"))
+France_gpv_2011 <- as.data.frame(France_gross_production_value %>% filter (Year=="2011"))
+France_gpv_2012 <- as.data.frame(France_gross_production_value %>% filter (Year=="2012"))
+France_gpv_2013 <- as.data.frame(France_gross_production_value %>% filter (Year=="2013"))
+France_gpv_2014 <- as.data.frame(France_gross_production_value %>% filter (Year=="2014"))
+France_gpv_2015 <- as.data.frame(France_gross_production_value %>% filter (Year=="2015"))
+
+Total91<- sum(France_gpv_1991[,'Value'])
+Total92<- sum(France_gpv_1992[,'Value'])
+Total93<- sum(France_gpv_1993[,'Value'])
+Total94<- sum(France_gpv_1994[,'Value'])
+Total95<- sum(France_gpv_1995[,'Value'])
+Total96<- sum(France_gpv_1996[,'Value'])
+Total97<- sum(France_gpv_1997[,'Value'])
+Total98<- sum(France_gpv_1998[,'Value'])
+Total99<- sum(France_gpv_1999[,'Value'])
+Total00<- sum(France_gpv_2000[,'Value'])
+Total01<- sum(France_gpv_2001[,'Value'])
+Total02<- sum(France_gpv_2002[,'Value'])
+Total03<- sum(France_gpv_2003[,'Value'])
+Total04<- sum(France_gpv_2004[,'Value'])
+Total05<- sum(France_gpv_2005[,'Value'])
+Total06<- sum(France_gpv_2006[,'Value'])
+Total07<- sum(France_gpv_2007[,'Value'])
+Total08<- sum(France_gpv_2008[,'Value'])
+Total09<- sum(France_gpv_2009[,'Value'])
+Total10<- sum(France_gpv_2010[,'Value'])
+Total11<- sum(France_gpv_2011[,'Value'])
+Total12<- sum(France_gpv_2012[,'Value'])
+Total13<- sum(France_gpv_2013[,'Value'])
+Total14<- sum(France_gpv_2014[,'Value'])
+Total15<- sum(France_gpv_2015[,'Value'])
+France_Annual_gpv <- data.frame("Year"=1991:2015,"Value"=c(Total91,Total92,Total93,Total94,Total95,Total96,Total97,Total98,Total99,Total00,Total01,Total02,Total03,Total04,Total05,Total06,Total07,Total08,Total09,Total10,Total11,Total12,Total13,Total14,Total15))
+France_Annual_gpv$growth_rate <- round(growth_rate(France_Annual_gpv$Value),2)
+
+temp_France_food <-read.csv(file="/Users/xiaomengkong/Desktop/data698/dataset/ncdc_noaa/France_temperature.csv")
+
+temp_France_food<- temp_France_food%>% filter (Year<=2015 & Year >=1992)
+France_Annual_gpv<- France_Annual_gpv%>% filter (Year<=2015 & Year >=1992)
+correlation_France <- data.frame(France_Annual_gpv$growth_rate,temp_France_food$Value)
+
+p_correlation_France <- plot_ly(data=correlation_France,x=~temp_France_food.Value,y=~France_Annual_gpv.growth_rate)%>%
+  layout(title = 'France Gross Production Values and Temperature between 1992 and 2015',
+         yaxis = list(title = "Gross Production Values $",zeroline = FALSE),
+         xaxis = list(title = "France Temperature",zeroline = FALSE))
+p_correlation_France
+
+cor <- cor.test(correlation_France$temp_France_food.Value,correlation_France$France_Annual_gpv.growth_rate)
+p_France<-cor$p.value
+cor_France<-cor$estimate
+
+# Turkey
+Turkey_gpv_1991 <- as.data.frame(Turkey_gross_production_value %>% filter (Year=="1991"))
+Turkey_gpv_1992 <- as.data.frame(Turkey_gross_production_value %>% filter (Year=="1992"))
+Turkey_gpv_1993 <- as.data.frame(Turkey_gross_production_value %>% filter (Year=="1993"))
+Turkey_gpv_1994 <- as.data.frame(Turkey_gross_production_value %>% filter (Year=="1994"))
+Turkey_gpv_1995 <- as.data.frame(Turkey_gross_production_value %>% filter (Year=="1995"))
+Turkey_gpv_1996 <- as.data.frame(Turkey_gross_production_value %>% filter (Year=="1996"))
+Turkey_gpv_1997 <- as.data.frame(Turkey_gross_production_value %>% filter (Year=="1997"))
+Turkey_gpv_1998 <- as.data.frame(Turkey_gross_production_value %>% filter (Year=="1998"))
+Turkey_gpv_1999 <- as.data.frame(Turkey_gross_production_value %>% filter (Year=="1999"))
+Turkey_gpv_2000 <- as.data.frame(Turkey_gross_production_value %>% filter (Year=="2000"))
+Turkey_gpv_2001 <- as.data.frame(Turkey_gross_production_value %>% filter (Year=="2001"))
+Turkey_gpv_2002 <- as.data.frame(Turkey_gross_production_value %>% filter (Year=="2002"))
+Turkey_gpv_2003 <- as.data.frame(Turkey_gross_production_value %>% filter (Year=="2003"))
+Turkey_gpv_2004 <- as.data.frame(Turkey_gross_production_value %>% filter (Year=="2004"))
+Turkey_gpv_2005 <- as.data.frame(Turkey_gross_production_value %>% filter (Year=="2005"))
+Turkey_gpv_2006 <- as.data.frame(Turkey_gross_production_value %>% filter (Year=="2006"))
+Turkey_gpv_2007 <- as.data.frame(Turkey_gross_production_value %>% filter (Year=="2007"))
+Turkey_gpv_2008 <- as.data.frame(Turkey_gross_production_value %>% filter (Year=="2008"))
+Turkey_gpv_2009 <- as.data.frame(Turkey_gross_production_value %>% filter (Year=="2009"))
+Turkey_gpv_2010 <- as.data.frame(Turkey_gross_production_value %>% filter (Year=="2010"))
+Turkey_gpv_2011 <- as.data.frame(Turkey_gross_production_value %>% filter (Year=="2011"))
+Turkey_gpv_2012 <- as.data.frame(Turkey_gross_production_value %>% filter (Year=="2012"))
+Turkey_gpv_2013 <- as.data.frame(Turkey_gross_production_value %>% filter (Year=="2013"))
+Turkey_gpv_2014 <- as.data.frame(Turkey_gross_production_value %>% filter (Year=="2014"))
+Turkey_gpv_2015 <- as.data.frame(Turkey_gross_production_value %>% filter (Year=="2015"))
+
+Total91<- sum(Turkey_gpv_1991[,'Value'])
+Total92<- sum(Turkey_gpv_1992[,'Value'])
+Total93<- sum(Turkey_gpv_1993[,'Value'])
+Total94<- sum(Turkey_gpv_1994[,'Value'])
+Total95<- sum(Turkey_gpv_1995[,'Value'])
+Total96<- sum(Turkey_gpv_1996[,'Value'])
+Total97<- sum(Turkey_gpv_1997[,'Value'])
+Total98<- sum(Turkey_gpv_1998[,'Value'])
+Total99<- sum(Turkey_gpv_1999[,'Value'])
+Total00<- sum(Turkey_gpv_2000[,'Value'])
+Total01<- sum(Turkey_gpv_2001[,'Value'])
+Total02<- sum(Turkey_gpv_2002[,'Value'])
+Total03<- sum(Turkey_gpv_2003[,'Value'])
+Total04<- sum(Turkey_gpv_2004[,'Value'])
+Total05<- sum(Turkey_gpv_2005[,'Value'])
+Total06<- sum(Turkey_gpv_2006[,'Value'])
+Total07<- sum(Turkey_gpv_2007[,'Value'])
+Total08<- sum(Turkey_gpv_2008[,'Value'])
+Total09<- sum(Turkey_gpv_2009[,'Value'])
+Total10<- sum(Turkey_gpv_2010[,'Value'])
+Total11<- sum(Turkey_gpv_2011[,'Value'])
+Total12<- sum(Turkey_gpv_2012[,'Value'])
+Total13<- sum(Turkey_gpv_2013[,'Value'])
+Total14<- sum(Turkey_gpv_2014[,'Value'])
+Total15<- sum(Turkey_gpv_2015[,'Value'])
+Turkey_Annual_gpv <- data.frame("Year"=1991:2015,"Value"=c(Total91,Total92,Total93,Total94,Total95,Total96,Total97,Total98,Total99,Total00,Total01,Total02,Total03,Total04,Total05,Total06,Total07,Total08,Total09,Total10,Total11,Total12,Total13,Total14,Total15))
+Turkey_Annual_gpv$growth_rate <- round(growth_rate(Turkey_Annual_gpv$Value),2)
+
+temp_Turkey_food <-read.csv(file="/Users/xiaomengkong/Desktop/data698/dataset/ncdc_noaa/Turkey_temperature.csv")
+
+temp_Turkey_food<- temp_Turkey_food%>% filter (Year<=2015 & Year >=1992)
+Turkey_Annual_gpv<- Turkey_Annual_gpv%>% filter (Year<=2015 & Year >=1992)
+correlation_Turkey <- data.frame(Turkey_Annual_gpv$growth_rate,temp_Turkey_food$Value)
+
+p_correlation_Turkey <- plot_ly(data=correlation_Turkey,x=~temp_Turkey_food.Value,y=~Turkey_Annual_gpv.growth_rate)%>%
+  layout(title = 'Turkey Gross Production Values and Temperature between 1992 and 2015',
+         yaxis = list(title = "Gross Production Values $",zeroline = FALSE),
+         xaxis = list(title = "Turkey Temperature",zeroline = FALSE))
+p_correlation_Turkey
+
+cor <- cor.test(correlation_Turkey$temp_Turkey_food.Value,correlation_Turkey$Turkey_Annual_gpv.growth_rate)
+p_Turkey<-cor$p.value
+cor_Turkey<-cor$estimate
+
+# Ireland
+Ireland_gpv_1991 <- as.data.frame(Ireland_gross_production_value %>% filter (Year=="1991"))
+Ireland_gpv_1992 <- as.data.frame(Ireland_gross_production_value %>% filter (Year=="1992"))
+Ireland_gpv_1993 <- as.data.frame(Ireland_gross_production_value %>% filter (Year=="1993"))
+Ireland_gpv_1994 <- as.data.frame(Ireland_gross_production_value %>% filter (Year=="1994"))
+Ireland_gpv_1995 <- as.data.frame(Ireland_gross_production_value %>% filter (Year=="1995"))
+Ireland_gpv_1996 <- as.data.frame(Ireland_gross_production_value %>% filter (Year=="1996"))
+Ireland_gpv_1997 <- as.data.frame(Ireland_gross_production_value %>% filter (Year=="1997"))
+Ireland_gpv_1998 <- as.data.frame(Ireland_gross_production_value %>% filter (Year=="1998"))
+Ireland_gpv_1999 <- as.data.frame(Ireland_gross_production_value %>% filter (Year=="1999"))
+Ireland_gpv_2000 <- as.data.frame(Ireland_gross_production_value %>% filter (Year=="2000"))
+Ireland_gpv_2001 <- as.data.frame(Ireland_gross_production_value %>% filter (Year=="2001"))
+Ireland_gpv_2002 <- as.data.frame(Ireland_gross_production_value %>% filter (Year=="2002"))
+Ireland_gpv_2003 <- as.data.frame(Ireland_gross_production_value %>% filter (Year=="2003"))
+Ireland_gpv_2004 <- as.data.frame(Ireland_gross_production_value %>% filter (Year=="2004"))
+Ireland_gpv_2005 <- as.data.frame(Ireland_gross_production_value %>% filter (Year=="2005"))
+Ireland_gpv_2006 <- as.data.frame(Ireland_gross_production_value %>% filter (Year=="2006"))
+Ireland_gpv_2007 <- as.data.frame(Ireland_gross_production_value %>% filter (Year=="2007"))
+Ireland_gpv_2008 <- as.data.frame(Ireland_gross_production_value %>% filter (Year=="2008"))
+Ireland_gpv_2009 <- as.data.frame(Ireland_gross_production_value %>% filter (Year=="2009"))
+Ireland_gpv_2010 <- as.data.frame(Ireland_gross_production_value %>% filter (Year=="2010"))
+Ireland_gpv_2011 <- as.data.frame(Ireland_gross_production_value %>% filter (Year=="2011"))
+Ireland_gpv_2012 <- as.data.frame(Ireland_gross_production_value %>% filter (Year=="2012"))
+Ireland_gpv_2013 <- as.data.frame(Ireland_gross_production_value %>% filter (Year=="2013"))
+Ireland_gpv_2014 <- as.data.frame(Ireland_gross_production_value %>% filter (Year=="2014"))
+Ireland_gpv_2015 <- as.data.frame(Ireland_gross_production_value %>% filter (Year=="2015"))
+
+Total91<- sum(Ireland_gpv_1991[,'Value'])
+Total92<- sum(Ireland_gpv_1992[,'Value'])
+Total93<- sum(Ireland_gpv_1993[,'Value'])
+Total94<- sum(Ireland_gpv_1994[,'Value'])
+Total95<- sum(Ireland_gpv_1995[,'Value'])
+Total96<- sum(Ireland_gpv_1996[,'Value'])
+Total97<- sum(Ireland_gpv_1997[,'Value'])
+Total98<- sum(Ireland_gpv_1998[,'Value'])
+Total99<- sum(Ireland_gpv_1999[,'Value'])
+Total00<- sum(Ireland_gpv_2000[,'Value'])
+Total01<- sum(Ireland_gpv_2001[,'Value'])
+Total02<- sum(Ireland_gpv_2002[,'Value'])
+Total03<- sum(Ireland_gpv_2003[,'Value'])
+Total04<- sum(Ireland_gpv_2004[,'Value'])
+Total05<- sum(Ireland_gpv_2005[,'Value'])
+Total06<- sum(Ireland_gpv_2006[,'Value'])
+Total07<- sum(Ireland_gpv_2007[,'Value'])
+Total08<- sum(Ireland_gpv_2008[,'Value'])
+Total09<- sum(Ireland_gpv_2009[,'Value'])
+Total10<- sum(Ireland_gpv_2010[,'Value'])
+Total11<- sum(Ireland_gpv_2011[,'Value'])
+Total12<- sum(Ireland_gpv_2012[,'Value'])
+Total13<- sum(Ireland_gpv_2013[,'Value'])
+Total14<- sum(Ireland_gpv_2014[,'Value'])
+Total15<- sum(Ireland_gpv_2015[,'Value'])
+Ireland_Annual_gpv <- data.frame("Year"=1991:2015,"Value"=c(Total91,Total92,Total93,Total94,Total95,Total96,Total97,Total98,Total99,Total00,Total01,Total02,Total03,Total04,Total05,Total06,Total07,Total08,Total09,Total10,Total11,Total12,Total13,Total14,Total15))
+Ireland_Annual_gpv$growth_rate <- round(growth_rate(Ireland_Annual_gpv$Value),2)
+
+temp_Ireland_food <-read.csv(file="/Users/xiaomengkong/Desktop/data698/dataset/ncdc_noaa/Ireland_temperature.csv")
+
+temp_Ireland_food<- temp_Ireland_food%>% filter (Year<=2015 & Year >=1992)
+Ireland_Annual_gpv<- Ireland_Annual_gpv%>% filter (Year<=2015 & Year >=1992)
+correlation_Ireland <- data.frame(Ireland_Annual_gpv$growth_rate,temp_Ireland_food$Value)
+
+p_correlation_Ireland <- plot_ly(data=correlation_Ireland,x=~temp_Ireland_food.Value,y=~Ireland_Annual_gpv.growth_rate)%>%
+  layout(title = 'Ireland Gross Production Values and Temperature between 1992 and 2015',
+         yaxis = list(title = "Gross Production Values $",zeroline = FALSE),
+         xaxis = list(title = "Ireland Temperature",zeroline = FALSE))
+p_correlation_Ireland
+
+cor <- cor.test(correlation_Ireland$temp_Ireland_food.Value,correlation_Ireland$Ireland_Annual_gpv.growth_rate)
+p_Ireland<-cor$p.value
+cor_Ireland<-cor$estimate
+
+# Russia
+Russia_gpv_1992 <- as.data.frame(Russia_gross_production_value %>% filter (Year=="1992"))
+Russia_gpv_1993 <- as.data.frame(Russia_gross_production_value %>% filter (Year=="1993"))
+Russia_gpv_1994 <- as.data.frame(Russia_gross_production_value %>% filter (Year=="1994"))
+Russia_gpv_1995 <- as.data.frame(Russia_gross_production_value %>% filter (Year=="1995"))
+Russia_gpv_1996 <- as.data.frame(Russia_gross_production_value %>% filter (Year=="1996"))
+Russia_gpv_1997 <- as.data.frame(Russia_gross_production_value %>% filter (Year=="1997"))
+Russia_gpv_1998 <- as.data.frame(Russia_gross_production_value %>% filter (Year=="1998"))
+Russia_gpv_1999 <- as.data.frame(Russia_gross_production_value %>% filter (Year=="1999"))
+Russia_gpv_2000 <- as.data.frame(Russia_gross_production_value %>% filter (Year=="2000"))
+Russia_gpv_2001 <- as.data.frame(Russia_gross_production_value %>% filter (Year=="2001"))
+Russia_gpv_2002 <- as.data.frame(Russia_gross_production_value %>% filter (Year=="2002"))
+Russia_gpv_2003 <- as.data.frame(Russia_gross_production_value %>% filter (Year=="2003"))
+Russia_gpv_2004 <- as.data.frame(Russia_gross_production_value %>% filter (Year=="2004"))
+Russia_gpv_2005 <- as.data.frame(Russia_gross_production_value %>% filter (Year=="2005"))
+Russia_gpv_2006 <- as.data.frame(Russia_gross_production_value %>% filter (Year=="2006"))
+Russia_gpv_2007 <- as.data.frame(Russia_gross_production_value %>% filter (Year=="2007"))
+Russia_gpv_2008 <- as.data.frame(Russia_gross_production_value %>% filter (Year=="2008"))
+Russia_gpv_2009 <- as.data.frame(Russia_gross_production_value %>% filter (Year=="2009"))
+Russia_gpv_2010 <- as.data.frame(Russia_gross_production_value %>% filter (Year=="2010"))
+Russia_gpv_2011 <- as.data.frame(Russia_gross_production_value %>% filter (Year=="2011"))
+Russia_gpv_2012 <- as.data.frame(Russia_gross_production_value %>% filter (Year=="2012"))
+Russia_gpv_2013 <- as.data.frame(Russia_gross_production_value %>% filter (Year=="2013"))
+Russia_gpv_2014 <- as.data.frame(Russia_gross_production_value %>% filter (Year=="2014"))
+Russia_gpv_2015 <- as.data.frame(Russia_gross_production_value %>% filter (Year=="2015"))
+
+
+Total92<- sum(Russia_gpv_1992[,'Value'])
+Total93<- sum(Russia_gpv_1993[,'Value'])
+Total94<- sum(Russia_gpv_1994[,'Value'])
+Total95<- sum(Russia_gpv_1995[,'Value'])
+Total96<- sum(Russia_gpv_1996[,'Value'])
+Total97<- sum(Russia_gpv_1997[,'Value'])
+Total98<- sum(Russia_gpv_1998[,'Value'])
+Total99<- sum(Russia_gpv_1999[,'Value'])
+Total00<- sum(Russia_gpv_2000[,'Value'])
+Total01<- sum(Russia_gpv_2001[,'Value'])
+Total02<- sum(Russia_gpv_2002[,'Value'])
+Total03<- sum(Russia_gpv_2003[,'Value'])
+Total04<- sum(Russia_gpv_2004[,'Value'])
+Total05<- sum(Russia_gpv_2005[,'Value'])
+Total06<- sum(Russia_gpv_2006[,'Value'])
+Total07<- sum(Russia_gpv_2007[,'Value'])
+Total08<- sum(Russia_gpv_2008[,'Value'])
+Total09<- sum(Russia_gpv_2009[,'Value'])
+Total10<- sum(Russia_gpv_2010[,'Value'])
+Total11<- sum(Russia_gpv_2011[,'Value'])
+Total12<- sum(Russia_gpv_2012[,'Value'])
+Total13<- sum(Russia_gpv_2013[,'Value'])
+Total14<- sum(Russia_gpv_2014[,'Value'])
+Total15<- sum(Russia_gpv_2015[,'Value'])
+Russia_Annual_gpv <- data.frame("Year"=1992:2015,"Value"=c(Total92,Total93,Total94,Total95,Total96,Total97,Total98,Total99,Total00,Total01,Total02,Total03,Total04,Total05,Total06,Total07,Total08,Total09,Total10,Total11,Total12,Total13,Total14,Total15))
+Russia_Annual_gpv$growth_rate <- round(growth_rate(Russia_Annual_gpv$Value),2)
+
+temp_Russia_food <-read.csv(file="/Users/xiaomengkong/Desktop/data698/dataset/ncdc_noaa/Russia_temperature.csv")
+
+temp_Russia_food<- temp_Russia_food%>% filter (Year<=2015 & Year >=1993)
+Russia_Annual_gpv<- Russia_Annual_gpv%>% filter (Year<=2015 & Year >=1993)
+correlation_Russia <- data.frame(Russia_Annual_gpv$growth_rate,temp_Russia_food$Value)
+temp_Russia_food<- temp_Russia_food%>% filter (Year<=2015 & Year >=1993)
+Russia_Annual_gpv<- Russia_Annual_gpv%>% filter (Year<=2015 & Year >=1993)
+correlation_Russia <- data.frame(Russia_Annual_gpv$growth_rate,temp_Russia_food$Value)
+
+p_correlation_Russia <- plot_ly(data=correlation_Russia,x=~temp_Russia_food.Value,y=~Russia_Annual_gpv.growth_rate)%>%
+  layout(title = 'Russia Gross Production Values and Temperature between 1992 and 2015',
+         yaxis = list(title = "Gross Production Values $",zeroline = FALSE),
+         xaxis = list(title = "Russia Temperature",zeroline = FALSE))
+p_correlation_Russia
+
+cor <- cor.test(correlation_Russia$temp_Russia_food.Value,correlation_Russia$Russia_Annual_gpv.growth_rate)
+p_Russia<-cor$p.value
+cor_Russia<-cor$estimate
+
+
+summary_table <- matrix(c(p_US,cor_US,p_Canada,cor_Canada,p_Mexico,cor_Mexico,p_DR,cor_DR,p_Jamaica,cor_Jamaica,p_Brazil,cor_Brazil,p_Argentina,cor_Argentina,p_China,cor_China,p_Japan,cor_Japan,p_India,cor_India,p_Indonesia,cor_Indonesia,p_Iran,cor_Iran,p_Cambodia,cor_Cambodia,p_Thailand,cor_Thailand,p_Qatar,cor_Qatar,p_Russia,cor_Russia,p_Norway,cor_Norway,p_France,cor_France,p_Turkey,cor_Turkey,p_Ireland,cor_Ireland,p_Ethiopia,cor_Ethiopia,p_Egypt,cor_Egypt,p_Congo, cor_Congo, p_Madagascar,cor_Madagascar),ncol=2,byrow=TRUE)
+rownames(summary_table) <- c("U.S (37.1 N)","Canada (56.1N)","Mexico (23.6 N)","DR (18.7 N)","Jamaica (18.1 N)","Brazil (14.2 S)","Argentina (38.4 S)","China (35.6 N)","Japan (36.2 N)","India (20.6 N)","Indonesia (0.8 S)","Iran (32.4 N)","Cambodia(12.6 N)","Thailand (15.9N)","Qatar(25.4 N)", "Russia (61.5 N)","Norway (60.5 N)","France (46.2 N)","Turkey (39.0 N)","Ireland(53.1N)","Ethiopia (9.1 N)","Egypt (26.8 N)","Congo (4.0 S)","Madagascar (18.8 S)")
+colnames(summary_table)<-c("p value", "r")
+summary_table <- as.data.frame(summary_table)
+summary_table <- summary_table[order(summary_table$r),]
+summary_table
+
+```
+```{r,echo=FALSE,warning=FALSE}
+
+
+d <- data.frame("Country"=c("Indonesia", "China","Argentina","Cambodia","Thailand","Brazil","Iran","Japan","India"),"r"=c(-0.46,-0.40,-0.27,-0.26,-0.22,-0.19,0.10,0.17,0.21),"latitude"=c("0.8S", "35.6N","38.4S","12.6N","15.9N","14.2S","32.4N","36.2N","20.6N"))
+kable(d)
+
+
+
+# hypothesis test for low income 
+
+low_income <- data.frame("Country"=c("Indonesia","Cambodia","Madagascar","Jamaica","Dominican Republic","Congo","Ethiopia","Mali"),"r"=c(-0.46,-0.26,-0.11,0.1,0.12,0.15,0.26,0.32))
+low_income
+r <- c(-0.46,-0.26,-0.11,0.1,0.12,0.15,0.26,0.32)
+t.test(r)
+
+
+
+
+high <- data.frame("Country"=c("China","Canada","U.S","Norway","Russia","Ireland","Japan","Argentina"), "r"=c(-0.40,-0.18,-0.06,0.21,0.31,0.33,0.17,-0.27))
+high
+r <- c(-0.40,-0.18,-0.06,0.21,0.31,0.33,0.17,-0.27)
+t.test(r)
+
+agriculture_vital <- data.frame("Country"=c("China","Argentina", "U.S","Brazil","Indonesia","Mexico"),"r"=c(-0.40,-0.27,-0.06,-0.19,-0.46,-0.35 ))
+agriculture_vital
+r <- c(-0.40,-0.27,-0.06,-0.19,-0.46,-0.35 )
+t.test(r)
+```
